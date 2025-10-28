@@ -187,6 +187,7 @@ data ExecutionFlag
   | FlagDisablePact54
   -- | Flag to enable modref read-only mode
   | FlagDisableReentrancyCheck
+  | FlagDisableMigratePlatformShare
   deriving (Eq,Ord,Show,Enum,Bounded, Generic)
 
 instance NFData ExecutionFlag

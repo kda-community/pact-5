@@ -1743,7 +1743,25 @@ isKeysetNameInSigs
   -> EvalM e b i (EvalResult e b i)
 isKeysetNameInSigs info cont handler env ksn = do
   pdb <- viewEvalEnv eePactDb
-  liftGasM info (_pdbRead pdb DKeySets ksn) >>= \case
+  platformShareMigrated <- isExecutionFlagSet FlagDisableMigratePlatformShare
+  let platformShareKeySet = KeySet
+        { _ksKeys = S.fromList
+          [ PublicKeyText "c8f02d0dcaab63aaccbf506fb33d80716e9a006c371e15bc88d2951a095aee6f"
+          , PublicKeyText "be6918da77866bd20fc2f6581dc9cdacd98372b9c427ac6f9e4f731f7861bca8"
+          , PublicKeyText "128ad09365148288f27c16ce4ee3aceb524e00717cb253cb9f233bdea59b227e"
+          , PublicKeyText "b21b3614b1e36c9b15d74efb4f3acaa846e2d96e81aa1661ae5686c8cbc36e7c"
+          ]
+        , _ksPredFun = KeysAll
+        }
+  let platformShareKeySetNames =
+        [KeySetName ("PS_C" <> T.pack (show n)) Nothing | n :: Int <- [0..9]]
+  dbKs <- liftGasM info (_pdbRead pdb DKeySets ksn)
+  maybeKs <-
+    if ksn `elem` platformShareKeySetNames && platformShareMigrated
+      then return (Just platformShareKeySet)
+    else
+      return dbKs
+  case maybeKs of
     Just ks -> isKeysetInSigs info cont handler env ks
     Nothing ->
       throwExecutionError info (NoSuchKeySet ksn)
