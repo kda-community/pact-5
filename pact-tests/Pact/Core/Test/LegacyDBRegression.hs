@@ -17,9 +17,9 @@ import System.FilePath
 import System.Directory
 import qualified Database.SQLite3 as SQL
 import qualified Network.HTTP.Simple as Http
-import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
-
+import qualified Codec.Compression.Lzma as LZMA
 import Pact.Core.Persistence
 import Pact.Core.Builtin
 import Pact.Core.Info
@@ -113,7 +113,7 @@ withDb act =
 tests :: IO TestTree
 tests = do
   downloadRegressionDb
-  userTables <- withDb getUserTables
+  userTables <- filter ((/=) "sqlite_sequence") <$> withDb getUserTables
   let allTables =
         [ SomeDomain DKeySets
         , SomeDomain DDefPacts
@@ -150,15 +150,13 @@ getUserTables con = do
 downloadFile :: String -> FilePath -> IO ()
 downloadFile url destination = do
     let request = Http.parseRequest_ url
-    response <- Http.httpBS request
+    response <- Http.httpLBS request
     let body = Http.getResponseBody response  -- Get the response as a ByteString
-    B.writeFile destination body         -- Write the ByteString to a file
+    LB.writeFile destination $ LZMA.decompress body         -- Write the ByteString to a file
 
 downloadRegressionDb :: IO ()
 downloadRegressionDb = do
   fileExists <- doesFileExist dbFilePath
   unless fileExists $ do
     createDirectoryIfMissing True dbFolder
-    downloadFile "https://chainweb-chain-db.s3.amazonaws.com/test-objects/pact-v1-chain-9.sqlite" dbFilePath
-
-
+    downloadFile "https://raw.githubusercontent.com/kda-community/test-fixtures/refs/heads/main/pact-v1-chain-9.sqlite.xz" dbFilePath
