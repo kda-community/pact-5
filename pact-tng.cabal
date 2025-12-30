@@ -7,8 +7,8 @@ description:
             Pact is a transactional, database-focused, Turing-incomplete, interpreted language for smart contracts,
             logic to be deployed and executed on a blockchain/distributed ledger. For more information see
             <http://kadena.io/pact>.
-homepage:            https://github.com/kadena-io/pact-5
-bug-reports:         https://github.com/kadena-io/pact-5/issues
+homepage:            https://github.com/kadena-community/pact-5
+bug-reports:         https://github.com/kadena-community/pact-5/issues
 license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Jose Cardona
