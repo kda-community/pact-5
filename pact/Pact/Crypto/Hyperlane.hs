@@ -47,13 +47,13 @@ import Data.WideWord.Word256 (Word256(..))
 import Data.Word (Word8, Word16, Word32)
 import Ethereum.Misc (keccak256, _getKeccak256Hash, _getBytesN)
 import Pact.JSON.Decode qualified as J
-import Pact.Core.StableEncoding 
+import Pact.Core.StableEncoding
 
 import Pact.Core.Errors
 import Pact.Core.PactValue
 import Pact.Core.Names
 import Pact.Core.Literal
-import Pact.Core.Hash
+import Pact.Core.Base64
 import qualified Data.Map as M
 
 ----------------------------------------------

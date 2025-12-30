@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Implementation of the `keccak256` pact native.
-module Pact.Core.Crypto.Hash.Keccak256 (Keccak256Error(..), keccak256) where
+module Pact.Crypto.Hash.Keccak256 (Keccak256Error(..), keccak256) where
 
 import Control.Exception (Exception(..), SomeException(..))
 import Control.Monad (forM_)
@@ -24,7 +24,7 @@ import Data.Hash.Keccak (Keccak256(..))
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Data.Vector (Vector)
-import Pact.Core.Crypto.Base64 (encodeBase64UrlUnpadded, decodeBase64UrlUnpadded)
+import Pact.Core.Base64 (encodeBase64UrlUnpadded, decodeBase64UrlUnpadded)
 import GHC.Generics(Generic)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -45,8 +45,8 @@ keccak256 bytesArray = unsafePerformIO $ do
       case decodeBase64UrlUnpadded bytes of
         Left b64Err -> do
           throwM (Keccak256Base64Exception b64Err)
-        Right bytes -> do
-          updateByteString @Keccak256 ctx bytes
+        Right decodedBytes -> do
+          updateByteString @Keccak256 ctx decodedBytes
     Keccak256 hash <- finalize ctx
     pure (BSS.fromShort $ coerce hash)
   case e of

@@ -1,4 +1,4 @@
-module Pact.Core.Crypto.Base64
+module Pact.Core.Base64
   ( encodeBase64UrlUnpadded
   , decodeBase64UrlUnpadded
   , fromB64UrlUnpaddedText
@@ -12,8 +12,7 @@ import Data.ByteString (ByteString)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Base64.URL as B64URL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import qualified Data.Text.Encoding as TE
 
 equalWord8 :: Word8
 equalWord8 = toEnum $ fromEnum '='
@@ -23,7 +22,7 @@ decodeBase64UrlUnpadded = B64URL.decode
 
 fromB64UrlUnpaddedText :: ByteString -> Either String Text
 fromB64UrlUnpaddedText bs = case decodeBase64UrlUnpadded bs of
-  Right bs' -> case T.decodeUtf8' bs' of
+  Right bs' -> case TE.decodeUtf8' bs' of
     Left _ -> Left "Base64URL decode failed: invalid unicode"
     Right t -> Right t
   Left _ -> Left $ "Base64URL decode failed"

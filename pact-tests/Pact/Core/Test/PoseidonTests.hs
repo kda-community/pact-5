@@ -3,7 +3,7 @@ module Pact.Core.Test.PoseidonTests(tests) where
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Pact.Core.Crypto.Hash.Poseidon
+import Pact.Crypto.Hash.Poseidon
 
 tests :: TestTree
 tests = testGroup "poseidon" $ pure $

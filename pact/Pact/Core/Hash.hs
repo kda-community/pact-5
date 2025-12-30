@@ -22,10 +22,6 @@ module Pact.Core.Hash
 , pactHash
 , pactInitialHash
 , pactHashLength
-, encodeBase64UrlUnpadded
-, decodeBase64UrlUnpadded
-, toB64UrlUnpaddedText
-, fromB64UrlUnpaddedText
 , defaultPactHash
 , placeholderHash
 , moduleHashToText
@@ -44,7 +40,7 @@ import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
 import GHC.Generics
 
-import Pact.Core.Crypto.Base64
+import Pact.Core.Base64
 
 import qualified Data.ByteString as B
 import qualified Data.Text as T

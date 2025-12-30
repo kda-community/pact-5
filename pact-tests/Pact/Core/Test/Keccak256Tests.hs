@@ -8,8 +8,8 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Vector qualified as V
-import Pact.Core.Crypto.Base64 (decodeBase64UrlUnpadded, encodeBase64UrlUnpadded)
-import Pact.Core.Crypto.Hash.Keccak256 (keccak256)
+import Pact.Core.Base64 (decodeBase64UrlUnpadded, encodeBase64UrlUnpadded)
+import Pact.Crypto.Hash.Keccak256 (keccak256)
 import Test.Tasty
 import Test.Tasty.HUnit
 

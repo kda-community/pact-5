@@ -23,6 +23,7 @@ import qualified Data.Vector as V
 import Pact.Core.Builtin
 import Pact.Core.Literal
 import Pact.Core.Hash
+import Pact.Core.Base64
 import Pact.Core.IR.Eval.Runtime
 import Pact.Core.DefPacts.Types
 import Pact.Core.IR.Eval.Direct.Evaluator
