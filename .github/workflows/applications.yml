@@ -1,8 +1,27 @@
 
-name: Build and publish application binaries
+name: Build and publish and optionnaly Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+          description: "Create a github release"
+          type: boolean
+          required: true
+          default: false
+
+      commit_sha:
+        description: "Commit to build"
+        type: string
+        required: false
+
+      version_suffix:
+        description: "Suffix for the vesion number (eg beta)"
+        type: string
+        required: false
+        default: ""
+
+
   push:
     paths:
     - '**'
@@ -11,34 +30,27 @@ on:
 
 jobs:
   build:
+    if: "!startsWith(github.ref, 'refs/tags/')"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["9.8.2", "9.10.1"]
+        ghc: ["9.8.2", "9.10.3"]
         cabal: ["3.12"]
-        os: ["ubuntu-22.04", "ubuntu-24.04", "macos-14"]
+        os: ["ubuntu-22.04", "ubuntu-24.04", "macos-14", "macos-15"]
         cabalcache: ["true"]
-
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.kadena_cabal_cache_aws_access_key_id }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.kadena_cabal_cache_aws_secret_access_key }}
-      AWS_DEFAULT_REGION: us-east-1
-
-      # Aritfacts
-      ARTIFACT_BUCKET: kadena-cabal-cache
-      BINFILE: pact.${{ matrix.ghc }}.${{ matrix.os }}.${{ github.sha }}.tar.gz
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+          ref: ${{ inputs.commit_sha || github.sha }}
 
     # Needed for a certain test
     - name: Download chain9 test file
       run: |
         mkdir -p pact-tests/legacy-db-regression
-        curl -L https://chainweb-chain-db.s3.amazonaws.com/test-objects/pact-v1-chain-9.sqlite \
-        -o pact-tests/legacy-db-regression/pact-v1-chain-9.sqlite
+        curl -L https://raw.githubusercontent.com/kda-community/test-fixtures/refs/heads/main/pact-v1-chain-9.sqlite.xz | unxz > pact-tests/legacy-db-regression/pact-v1-chain-9.sqlite
     # Haskell Setup
     - name: Set permissions for .ghcup (ubuntu)
       if: startsWith(matrix.os, 'ubuntu-')
@@ -95,44 +107,37 @@ jobs:
     - name: Print cabal.project.local
       shell: bash
       run: cat cabal.project.local
-    - uses: actions/cache@v4
-      name: Cache dist-newstyle
-      with:
-        path: |
-          ~/.cabal/packages
-          ~/.cabal/store
-          dist-newstyle
-        key: ${{ matrix.os }}-${{ matrix.ghc }}-4-cabal
 
     # Build
     - name: Update package database
       shell: bash
       run: cabal update
+
+    - name: Restore cabal store
+      uses: actions/cache@v4
+      with:
+        path: ~/.cabal/store
+        key: cabal-${{ matrix.os }}-${{ matrix.ghc }}
+
     - name: Display outdated packages
       run: cabal outdated
+
     - name: Configure build
       run: |
         cabal build --dry-run
         cabal freeze
-    - name: Sync with cabal cache
-      if: matrix.cabalcache == 'true'
-      uses: larskuhtz/cabal-cache-action@4b537195b33898fcd9adc62cee2a44986fd7b1b6
-      with:
-        bucket: "kadena-cabal-cache"
-        region: "us-east-1"
-        folder: "packages/${{ matrix.os }}"
-        aws_access_key_id: "${{ secrets.kadena_cabal_cache_aws_access_key_id }}"
-        aws_secret_access_key: "${{ secrets.kadena_cabal_cache_aws_secret_access_key }}"
 
     - name: Build dependencies
       shell: bash
       run: cabal build --only-dependencies
+
     - name: Build
       shell: bash
       run: cabal build
+
     - name: Test
       shell: bash
-      run: cabal run tests
+      run: cabal run tests -- --hedgehog-discards 200
 
     - name: Verify Binary Linking
       shell: bash
@@ -144,16 +149,29 @@ jobs:
       if: "!contains(matrix.flags, '-build-tool')"
       shell: bash
       run: |
-        export VER=$(grep '^version' pact-tng.cabal | sed -e 's/.*: *//')
-        mkdir -p artifacts/pact
-        cp $(cabal list-bin pact) artifacts/pact
-        cp CHANGELOG.md artifacts/pact
-        cp README.md artifacts/pact
-        cp LICENSE artifacts/pact
+
+        OUTPUT_DIR=artifacts/pact
+        mkdir -p $OUTPUT_DIR
+        cp $(cabal list-bin pact) $OUTPUT_DIR
+        cp $(cabal list-bin profile-tx) $OUTPUT_DIR
+        cp $(cabal list-bin core-tests) $OUTPUT_DIR
+        cp $(cabal list-bin gasmodel) $OUTPUT_DIR
+        cp CHANGELOG.md $OUTPUT_DIR
+        cp README.md $OUTPUT_DIR
+        cp LICENSE $OUTPUT_DIR
         cp pact-tng.cabal artifacts/pact
         cp cabal.project artifacts/pact
         cp cabal.project.local artifacts/pact
         cp cabal.project.freeze artifacts/pact
+
+        OUTPUT_DIR=artifacts/pact_to_release
+        mkdir -p $OUTPUT_DIR
+        cp $(cabal list-bin pact) $OUTPUT_DIR
+        strip $OUTPUT_DIR/pact
+        cp CHANGELOG.md $OUTPUT_DIR
+        cp README.md $OUTPUT_DIR
+        cp LICENSE $OUTPUT_DIR
+
     - name: Publish applications
       if: "!contains(matrix.flags, '-build-tool')"
       uses: actions/upload-artifact@v4
@@ -161,100 +179,85 @@ jobs:
         name: pact-applications.${{ matrix.ghc }}.${{ matrix.os }}
         path: artifacts/pact
 
-    # Publish to S3
-    - name: Publish applications to S3
+    - name: Publish release artifact
       if: "!contains(matrix.flags, '-build-tool')"
-      shell: bash
-      run: |
-        tar -C ./artifacts/pact/ -czf $BINFILE '.'
-        echo "created tar file: $BINFILE"
-        ls $BINFILE
-        aws s3 cp $BINFILE s3://$ARTIFACT_BUCKET/pact/
-        echo "uploaded tar file to S3"
-        aws s3api put-object-acl --bucket $ARTIFACT_BUCKET --key=pact/$BINFILE --acl public-read
-        echo "set public read permission"
+      uses: actions/upload-artifact@v4
+      with:
+        name: pact-to-release.ghc${{ matrix.ghc }}.${{ matrix.os }}
+        path: artifacts/pact_to_release
 
-  # ########################################################################## #
-  # Build and publish docker image
 
-  docker-image:
-    name: Build and publish docker image
-    needs: [build]
-    runs-on: ${{ matrix.os }}
+  release:
+
+    runs-on: "ubuntu-latest"
+    needs: build
+    if: inputs.release == true
+
+    env:
+      GHC_FOR_RELEASE: "9.10.3"
+      OS_TO_RELEASE: "ubuntu-22.04 ubuntu-24.04 macos-14 macos-15"
+      MAIN_LINUX_VERSION: "ubuntu-24.04"
+
     strategy:
       fail-fast: false
-      matrix:
-        include:
-        - ghc: "9.10.1"
-          os: "ubuntu-22.04"
-    env:
-      OS: ${{ matrix.os }}
-    steps:
-    - name: Get build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: pact-applications.${{ matrix.ghc }}.${{ matrix.os }}
-        path: pact
-    - name: Create Dockerfile
-      run: |
-        chmod 755 pact/pact
-        cat > Dockerfile <<EOF
-        FROM ubuntu:${OS#ubuntu-}
-        LABEL com.pact.docker.image.compiler="ghc-${{ matrix.ghc }}"
-        LABEL com.pact.docker.image.os="${{ matrix.os }}"
-        RUN apt-get update && apt-get install -y ca-certificates libgmp10 libmpfr-dev libssl3 zlib1g locales && rm -rf /var/lib/apt/lists/* && locale-gen en_US.UTF-8 && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-        ENV LANG=en_US.UTF-8
-        WORKDIR /pact
-        COPY pact/pact .
-        COPY pact/LICENSE .
-        COPY pact/README.md .
-        COPY pact/CHANGELOG.md .
-        COPY pact/pact-tng.cabal .
-        COPY pact/cabal.project .
-        COPY pact/cabal.project.local .
-        COPY pact/cabal.project.freeze .
-        STOPSIGNAL SIGTERM
-        ENTRYPOINT [ "/pact/pact" ]
-        EOF
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: ghcr.io/kadena-io/pact-5
-        tags: |
-          type=sha
-          type=ref,event=branch
-          type=ref,event=tag
-          type=ref,event=pr
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    - name: Cache Docker layers
-      uses: actions/cache@v4
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: kadena-build
-        password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build and push
-      id: docker_build
-      uses: docker/build-push-action@v4
-      with:
-        push: true
-        context: .
-        file: ./Dockerfile
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to: type=local,dest=/tmp/.buildx-cache
 
-  nightly:
-    if: github.ref == 'refs/heads/master'
-    needs: [docker-image]
-    uses: kadena-io/pact-5/.github/workflows/release-manual.yml@master
-    secrets: inherit
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha || github.sha }}
+
+      - name: Download artifacts
+        uses : actions/download-artifact@v5
+        with:
+          pattern: pact-to-release.ghc${{ env.GHC_FOR_RELEASE }}.*
+          path: to_release/
+
+      - name: List directory
+        shell: bash
+        run: ls -lR to_release
+
+      - name: Retrieve version
+        id: get_version
+        shell: bash
+        run: |
+          PACT_BIN=to_release/pact-to-release.ghc${{ env.GHC_FOR_RELEASE }}.${{ env.MAIN_LINUX_VERSION }}/pact
+          chmod a+x "$PACT_BIN"
+          VERSION=$($PACT_BIN --version | grep -oE '[0-9]+(\.[0-9]+)+')${{inputs.version_suffix}}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Prepare releases
+        id: prepare
+        shell: bash
+        run: |
+          mkdir -p releases_archives
+
+          for o in $OS_TO_RELEASE
+          do FILENAME=pact-${{ steps.get_version.outputs.version }}-${GITHUB_SHA::4}-$o.tar.gz
+             SRC_DIR=to_release/pact-to-release.ghc${{ env.GHC_FOR_RELEASE }}.$o
+             chmod a+x $SRC_DIR/pact
+             (cd $SRC_DIR; tar czf $GITHUB_WORKSPACE/releases_archives/$FILENAME *)
+          done
+
+      - name: List directory
+        shell: bash
+        run: ls -lR releases_archives
+
+      - name: Generate release
+        uses: ncipollo/release-action@v1
+
+        with:
+          bodyFile: .github/RELEASE.md
+          artifacts: releases_archives/*
+          commit: ${{ inputs.commit_sha || github.sha }}
+          name: Pact v${{ steps.get_version.outputs.version }}
+          tag: ${{ steps.get_version.outputs.version }}
+          token: ${{ secrets.GH_PAT }}
+          prerelease: true
+          omitBodyDuringUpdate: true
+          skipIfReleaseExists: false
+          draft: false
+          generateReleaseNotes: true
+          allowUpdates: true
+          replacesArtifacts: true
+          updateOnlyUnreleased: true

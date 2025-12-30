@@ -277,7 +277,7 @@ runCoinXferDirect pdb =  do
 
 
 mkCoinIdent :: Text -> Name
-mkCoinIdent n = Name n (NTopLevel (ModuleName "coin" Nothing) (ModuleHash {_mhHash = unsafeModuleHash "DFsR46Z3vJzwyd68i0MuxIF0JxZ_OJfIaMyFFgAyI4w"}))
+mkCoinIdent n = Name n (NTopLevel (ModuleName "coin" Nothing) (ModuleHash {_mhHash = unsafeModuleHash "D5PlKnWL1EwOccoOm0lYyrEm9R95_MQwB6RojuCep-M"}))
 
 main :: IO ()
 main = withSqlitePactDb serialisePact_lineinfo_pact51 (T.pack benchmarkSqliteFile) $ \pdb -> do
