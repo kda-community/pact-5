@@ -107,6 +107,7 @@ common pact-common
     , ethereum
     , template-haskell
     , pact-tng:unsafe
+    , hashes >= 0.3
 
   ghc-options: -Wall -Werror -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   ghc-prof-options: -fprof-auto -fprof-auto-calls
@@ -295,6 +296,15 @@ library
 
     -- Hyperlane
     Pact.Crypto.Hyperlane
+
+  -- SLH DSA
+    Pact.Crypto.SlhDsa.Parameters
+    Pact.Crypto.SlhDsa.SlhDsa
+    Pact.Crypto.SlhDsa.Addresses
+    Pact.Crypto.SlhDsa.MessageDigest
+    Pact.Crypto.SlhDsa.Signature
+    Pact.Crypto.SlhDsa.Utils
+    Pact.Crypto.SlhDsa.ChainwebSlhDsa
 
     -- Coverage
     Pact.Core.Coverage.Types
@@ -608,6 +618,7 @@ test-suite core-tests
     , Pact.Core.Test.PactContinuationTest
     , Pact.Core.Test.ClientTests
     , Pact.Core.Test.ServerUtils
+    , Pact.Core.Test.SlhSignaturesTests
     , Pact.Core.Test.TransitiveDependencyTests
     , Pact.Core.Test.ReplTestUtils
     , Pact.Core.Test.TypecheckerTests
