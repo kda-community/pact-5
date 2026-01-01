@@ -20,6 +20,8 @@ module Pact.Crypto.SlhDsa.Utils
 , sphincsSha512
   ) where
 
+import Prelude hiding (Foldable(..))
+import Data.Foldable (Foldable(..))
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SB
 import Data.Bits

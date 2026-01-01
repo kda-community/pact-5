@@ -7,6 +7,8 @@ module Pact.Crypto.SlhDsa.SlhDsa
 , verifySignaturePreHashedWithContext
 ) where
 
+import Prelude hiding (Foldable(..))
+import Data.Foldable (Foldable(..))
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SB
 import qualified Data.Vector as V
