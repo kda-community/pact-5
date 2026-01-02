@@ -8,6 +8,7 @@ import qualified Criterion as C
 import Data.Maybe (fromJust)
 import Pact.Crypto.SlhDsa.ChainwebSlhDsa
 import Pact.Core.Hash
+import Pact.Core.Scheme
 import Data.Text as T
 
 -- TODO = Add EDD25519 Signatures and WebAuthn
@@ -15,23 +16,18 @@ import Data.Text as T
 benchmarks :: C.Benchmark
 benchmarks = C.bgroup "Signiatures benchmarks" [slhDsaBenchmark]
 
-slhTest:: Text -> Either String Bool
-slhTest scheme = verifySig scheme key sig testHash
-  where
-    sig | scheme == "SLH-DSA-SHA2-128s" = slhSig0
-        | scheme == "SLH-DSA-SHA2-192s" = slhSig1
-        | otherwise = slhSig2
-
-    key | scheme == "SLH-DSA-SHA2-128s" = slhKey0
-        | scheme == "SLH-DSA-SHA2-192s" = slhkey1
-        | otherwise = slhkey2
+slhTest:: PPKScheme -> Either String ()
+slhTest SlhDsaSha128s = verifySig SlhDsaSha128s slhKey0 slhSig0 testHash
+slhTest SlhDsaSha192s = verifySig SlhDsaSha192s slhkey1 slhSig1 testHash
+slhTest SlhDsaSha256s = verifySig SlhDsaSha256s slhkey2 slhSig2 testHash
+slhTest _ = error "We only do SLH tests here"
 
 
 
 slhDsaBenchmark:: C.Benchmark
-slhDsaBenchmark = C.bgroup "SLH DSA BenchMarks" [ C.bench "SLH-DSA-128s" $ C.nf slhTest "SLH-DSA-SHA2-128s"
-                                                , C.bench "SLH-DSA-192s" $ C.nf slhTest "SLH-DSA-SHA2-192s"
-                                                , C.bench "SLH-DSA-256s" $ C.nf slhTest "SLH-DSA-SHA2-256s" ]
+slhDsaBenchmark = C.bgroup "SLH DSA BenchMarks" [ C.bench "SLH-DSA-128s" $ C.nf slhTest SlhDsaSha128s
+                                                , C.bench "SLH-DSA-192s" $ C.nf slhTest SlhDsaSha192s
+                                                , C.bench "SLH-DSA-256s" $ C.nf slhTest SlhDsaSha256s]
 
 slhKey0:: T.Text
 slhKey0 = "8e675391075de70e10ab6d5401c5a04dea29131e47c7c616e127103e03b54a74"

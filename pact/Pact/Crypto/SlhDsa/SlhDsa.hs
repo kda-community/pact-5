@@ -188,28 +188,25 @@ preparePureMessage context = prepareMessage context SB.empty
 -- External functions
 -------------------------------------------------------------------------------
 -- According to the old SPHINCS / FIPS-205 spec
-verifySignatureRaw:: Parameter -> PublickKey -> RawSignature -> Message -> Either String Bool
+verifySignatureRaw:: Parameter -> PublickKey -> RawSignature -> Message -> Either String ()
 verifySignatureRaw prm pkey rawSig msg = do
     pkey' <- keyChecked prm pkey
     sig   <- toSignatureChecked prm rawSig
     checkPubKeyMatch prm pkey' $ slhDsaPkFromSig prm pkey' sig msg
-    return True
 
 -- Verify a signature with context and wrappping according to the FIP-25 in force
-verifySignaturePureWithContext:: Parameter -> SigContext -> PublickKey -> RawSignature -> Message -> Either String Bool
+verifySignaturePureWithContext:: Parameter -> SigContext -> PublickKey -> RawSignature -> Message -> Either String ()
 verifySignaturePureWithContext prm ctx pkey rawSig msg = do
     pkey' <- keyChecked prm pkey
     sig   <- toSignatureChecked prm rawSig
     msg'  <- preparePureMessage ctx msg
     checkPubKeyMatch prm pkey' $ slhDsaPkFromSig prm pkey' sig msg'
-    return True
 
 -- Verify a pre-hashed signature with context and wrappping according to the FIP-25 in force
 -- We assume the msg comes pre-hashed
-verifySignaturePreHashedWithContext:: Parameter -> SigContext -> OID -> PublickKey -> RawSignature -> Message -> Either String Bool
+verifySignaturePreHashedWithContext:: Parameter -> SigContext -> OID -> PublickKey -> RawSignature -> Message -> Either String ()
 verifySignaturePreHashedWithContext prm ctx oid pkey rawSig msg = do
     pkey' <- keyChecked prm pkey
     sig   <- toSignatureChecked prm rawSig
     msg'  <- prepareMessage ctx oid msg
     checkPubKeyMatch prm pkey' $ slhDsaPkFromSig prm pkey' sig msg'
-    return True

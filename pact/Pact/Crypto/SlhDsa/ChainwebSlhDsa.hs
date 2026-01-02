@@ -7,6 +7,7 @@ import Pact.Crypto.SlhDsa.Parameters
 import Pact.Crypto.SlhDsa.Utils
 import Pact.Crypto.SlhDsa.SlhDsa
 import Pact.Core.Hash
+import Pact.Core.Scheme
 
 import qualified Data.ByteString.Short as SB
 import qualified Data.Text as T
@@ -30,13 +31,13 @@ blake2b256Oid = SB.toShort $ B16.decodeLenient "060A2B0601040186BA0C020108"
 blake2b512Oid:: SB.ShortByteString
 blake2b512Oid = SB.toShort $ B16.decodeLenient "060A2B0601040186BA0C020110"
 
--- Auto Select the signature scheme based on Public key length
-paramaterFromScheme:: T.Text -> Either String Parameter
-paramaterFromScheme scheme
-                | scheme == "SLH-DSA-SHA2-128s" = Right slh_dsa_sha2_128s
-                | scheme == "SLH-DSA-SHA2-192s" = Right slh_dsa_sha2_192s
-                | scheme == "SLH-DSA-SHA2-256s" = Right slh_dsa_sha2_256s
-                | otherwise = Left "Unsupported Signature scheme"
+-- Auto Select the set of pramaters depending on scheme
+paramaterFromScheme:: PPKScheme -> Either String Parameter
+paramaterFromScheme SlhDsaSha128s = Right slh_dsa_sha2_128s
+paramaterFromScheme SlhDsaSha192s = Right slh_dsa_sha2_192s
+paramaterFromScheme SlhDsaSha256s = Right slh_dsa_sha2_256s
+paramaterFromScheme _ = Left "Unsupported Signature scheme"
+
 
 -- Auto Select the Hash OID based ont the Hash length
 oidFromhash:: Hash -> Either String OID
@@ -47,7 +48,7 @@ oidFromhash txHash
 
 -- Main entry point for verifying signatures
 -- TODO Signature spec needs to be finalized
-verifySig:: T.Text -> T.Text -> T.Text -> Hash -> Either String Bool
+verifySig:: PPKScheme -> T.Text -> T.Text -> Hash -> Either String ()
 verifySig pactScheme pkey sig txHash = do
     decodedPkey <- SB.toShort <$> (B16.decode $ TE.encodeUtf8 pkey)
     decodedSig  <- B64.decodeBase64UrlUnpadded $ TE.encodeUtf8 sig

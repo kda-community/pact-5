@@ -23,6 +23,7 @@ import qualified Network.HTTP.Simple as Http
 import Data.Coerce
 import qualified Data.Hash.SHA2 as HS
 
+import Pact.Core.Scheme
 import Pact.Core.Hash
 import Pact.Crypto.SlhDsa.SlhDsa
 import Pact.Crypto.SlhDsa.ChainwebSlhDsa
@@ -153,7 +154,7 @@ testPreHashSig256 expectation doc = do
   where ctx' = fromJust $ context doc'
         doc' = fromJust doc
 
-testChainWebSign:: Bool -> T.Text -> T.Text -> T.Text -> Hash -> Assertion
+testChainWebSign:: Bool -> PPKScheme -> T.Text -> T.Text -> Hash -> Assertion
 testChainWebSign expectation pactScheme pkey sig txHash = expectation @=? (isRight $ verifySig pactScheme pkey sig txHash)
 
 
@@ -266,18 +267,18 @@ testsNist = withResource readPromptDocument'
 
 testsNistChainWebGroup:: TestTree
 testsNistChainWebGroup =  testGroup "SLH DSA Chainweb"
-                            [ testCase "Good 128s signature with 256 bytes Hash" ( testChainWebSign True  "SLH-DSA-SHA2-128s" key1 sig0 hash1)
-                            , testCase "Good 192s signature with 256 bytes Hash" ( testChainWebSign True  "SLH-DSA-SHA2-192s" key2 sig1 hash1)
-                            , testCase "Good 256s signature with 256 bytes Hash" ( testChainWebSign True  "SLH-DSA-SHA2-256s" key3 sig2 hash1)
-                            , testCase "Good 128s signature with 512 bytes Hash" ( testChainWebSign True  "SLH-DSA-SHA2-128s" key1 sig3 hash2)
-                            , testCase "Good 192s signature with 512 bytes Hash" ( testChainWebSign True  "SLH-DSA-SHA2-192s" key2 sig4 hash2)
-                            , testCase "Good 256s signature with 512 bytes Hash" ( testChainWebSign True  "SLH-DSA-SHA2-256s" key3 sig5 hash2)
-                            , testCase "Bad  128s signature with 256 bytes Hash" ( testChainWebSign False "SLH-DSA-SHA2-128s" key1 sig0 hash1Bad)
-                            , testCase "Bad  192s signature with 256 bytes Hash" ( testChainWebSign False "SLH-DSA-SHA2-192s" key2 sig1 hash1Bad)
-                            , testCase "Bad  256s signature with 256 bytes Hash" ( testChainWebSign False "SLH-DSA-SHA2-256s" key3 sig2 hash1Bad)
-                            , testCase "Bad  128s signature with 512 bytes Hash" ( testChainWebSign False "SLH-DSA-SHA2-128s" key1 sig3 hash2Bad)
-                            , testCase "Bad  192s signature with 512 bytes Hash" ( testChainWebSign False "SLH-DSA-SHA2-192s" key2 sig4 hash2Bad)
-                            , testCase "Bad  256s signature with 512 bytes Hash" ( testChainWebSign False "SLH-DSA-SHA2-256s" key3 sig5 hash2Bad)
+                            [ testCase "Good 128s signature with 256 bytes Hash" ( testChainWebSign True  SlhDsaSha128s key1 sig0 hash1)
+                            , testCase "Good 192s signature with 256 bytes Hash" ( testChainWebSign True  SlhDsaSha192s key2 sig1 hash1)
+                            , testCase "Good 256s signature with 256 bytes Hash" ( testChainWebSign True  SlhDsaSha256s key3 sig2 hash1)
+                            , testCase "Good 128s signature with 512 bytes Hash" ( testChainWebSign True  SlhDsaSha128s key1 sig3 hash2)
+                            , testCase "Good 192s signature with 512 bytes Hash" ( testChainWebSign True  SlhDsaSha192s key2 sig4 hash2)
+                            , testCase "Good 256s signature with 512 bytes Hash" ( testChainWebSign True  SlhDsaSha256s key3 sig5 hash2)
+                            , testCase "Bad  128s signature with 256 bytes Hash" ( testChainWebSign False SlhDsaSha128s key1 sig0 hash1Bad)
+                            , testCase "Bad  192s signature with 256 bytes Hash" ( testChainWebSign False SlhDsaSha192s key2 sig1 hash1Bad)
+                            , testCase "Bad  256s signature with 256 bytes Hash" ( testChainWebSign False SlhDsaSha256s key3 sig2 hash1Bad)
+                            , testCase "Bad  128s signature with 512 bytes Hash" ( testChainWebSign False SlhDsaSha128s key1 sig3 hash2Bad)
+                            , testCase "Bad  192s signature with 512 bytes Hash" ( testChainWebSign False SlhDsaSha192s key2 sig4 hash2Bad)
+                            , testCase "Bad  256s signature with 512 bytes Hash" ( testChainWebSign False SlhDsaSha256s key3 sig5 hash2Bad)
                             ]
 
 
