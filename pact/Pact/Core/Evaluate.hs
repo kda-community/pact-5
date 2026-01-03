@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Pact.Core.Evaluate
   ( MsgData(..)
@@ -54,6 +55,7 @@ import Pact.Core.PactValue
 import Pact.Core.Gas
 import Pact.Core.Names
 import Pact.Core.Guards
+import Pact.Core.Scheme
 import Pact.Core.SPV
 import Pact.Core.Namespace
 import Pact.Core.IR.Desugar
@@ -157,6 +159,16 @@ data EvalResult = EvalResult
 type Info = LineInfo
 
 
+signerToTextQuantum:: Signer -> PublicKeyText
+signerToTextQuantum Signer{_siScheme = Nothing,..}       =  PublicKeyText _siPubKey -- missing scheme means ED25519
+signerToTextQuantum Signer{_siScheme = Just ED25519,..}  =  PublicKeyText _siPubKey
+signerToTextQuantum Signer{_siScheme = Just WebAuthn,..} =  PublicKeyText _siPubKey
+signerToTextQuantum Signer{_siScheme = Just SlhDsaSha128s,..} =  PublicKeyText $ "q" <> _siPubKey
+signerToTextQuantum Signer{_siScheme = Just SlhDsaSha192s,..} =  PublicKeyText $ "q" <> _siPubKey
+signerToTextQuantum Signer{_siScheme = Just SlhDsaSha256s,..} =  PublicKeyText $ "q" <> _siPubKey
+
+signerToTextLegacy:: Signer -> PublicKeyText
+signerToTextLegacy Signer{..} = PublicKeyText $ fromMaybe _siPubKey _siAddress
 
 setupEvalEnv
   :: PactDb CoreBuiltin a
@@ -190,8 +202,11 @@ setupEvalEnv pdb mode msgData mCont gasEnv np spv pd efs = do
   contToPactStep (Cont pid step rb _) = DefPactStep step rb pid Nothing
   mkMsgSigs ss = M.fromList $ map toPair ss
     where
-    toPair (Signer _scheme pubK addr capList) =
-      (PublicKeyText (fromMaybe pubK addr),S.fromList (_sigCapability <$> capList))
+    toPair s@Signer{..} = (signerToText s, S.fromList $ _sigCapability <$> _siCapList)
+
+    signerToText | S.member FlagDisableSlhDsaSignatures efs = signerToTextLegacy
+                 | otherwise = signerToTextQuantum
+
   mkMsgVerifiers vs = M.fromListWith S.union $ map toPair vs
     where
     toPair (Verifier vfn _ caps) = (vfn, S.fromList (_sigCapability <$> caps))

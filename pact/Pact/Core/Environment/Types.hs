@@ -187,6 +187,8 @@ data ExecutionFlag
   | FlagDisablePact54
   -- | Flag to enable modref read-only mode
   | FlagDisableReentrancyCheck
+  -- | Flag to disable SLH-DSA Signatures
+  | FlagDisableSlhDsaSignatures
   deriving (Eq,Ord,Show,Enum,Bounded, Generic)
 
 instance NFData ExecutionFlag

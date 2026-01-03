@@ -356,7 +356,7 @@ loadSigData fp = do
 
 addSigToSigData :: Ed25519KeyPair -> SigData a -> IO (SigData a)
 addSigToSigData kp sd = do
-  let sig = ED25519Sig $ signHash (_sigDataHash sd) kp
+  let sig = PlainSig $ signHash (_sigDataHash sd) kp
   let k = PublicKeyHex $ toB16Text $ getPublic kp
   return $ sd { _sigDataSigs = addSigToList k sig $ _sigDataSigs sd }
 
@@ -411,8 +411,8 @@ returnSigDataOrCommand  outputLocal sd
     sigs' <- foldrM toVerifPair [] sigs
     traverse_ Left $ verifyUserSigs h sigs'
     where
-    toVerifPair (PublicKeyHex pktext, Just (ED25519Sig _usSig) ) m = do
-      let sig = ED25519Sig _usSig
+    toVerifPair (PublicKeyHex pktext, Just (PlainSig _usSig) ) m = do
+      let sig = PlainSig _usSig
       let signer = Signer (Just ED25519) pktext Nothing []
       pure $ (sig, signer):m
     toVerifPair (_, _) m = pure m
@@ -814,7 +814,7 @@ mkUnsignedCommand signers vers meta nonce nid rpc = mkCommand' [] encodedPayload
 mkCommand' :: [(Ed25519KeyPair ,a)] -> ByteString -> IO (Command ByteString)
 mkCommand' creds env = do
   let hsh = PactHash.hash env   -- hash associated with a Command, aka a Command's Request Key
-      toUserSig (cred,_) = ED25519Sig $ signHash hsh cred
+      toUserSig (cred,_) = PlainSig $ signHash hsh cred
   let sigs = toUserSig <$> creds
   return $ Command env sigs hsh
 
@@ -832,7 +832,7 @@ mkCommandWithDynKeys' creds env = do
     toUserSig :: PactHash.Hash -> (DynKeyPair, a) -> IO UserSig
     toUserSig hsh = \case
       (DynEd25519KeyPair (pub, priv), _) ->
-        pure $ ED25519Sig $ signHash hsh (pub, priv)
+        pure $ PlainSig $ signHash hsh (pub, priv)
       (DynWebAuthnKeyPair _ pubWebAuthn privWebAuthn, _) -> do
         signResult <- runExceptT $ signWebauthn pubWebAuthn privWebAuthn "" hsh
         case signResult of
