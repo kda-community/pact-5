@@ -113,23 +113,42 @@ jobs:
       shell: bash
       run: cabal update
 
-    - name: Restore cabal store
-      uses: actions/cache@v4
-      with:
-        path: ~/.cabal/store
-        key: cabal-${{ matrix.os }}-${{ matrix.ghc }}
-
-    - name: Display outdated packages
-      run: cabal outdated
-
-    - name: Configure build
+    - name: Configure build / and freeze
       run: |
         cabal build --dry-run
         cabal freeze
 
+    - name: Generate cache key
+      id: cache-key
+      run: |
+        grep -v '^index-state:' cabal.project.freeze > freeze-deps-only
+        FREEZE_HASH=$(shasum freeze-deps-only | cut -d' ' -f1)
+        echo "freeze-hash=$FREEZE_HASH" >> $GITHUB_OUTPUT
+        rm freeze-deps-only
+
+    - name: Restore Cabal store
+      id: restore-cabal
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.cabal/store
+        key: cabal-${{ matrix.os }}-${{ matrix.ghc }}-${{ steps.cache-key.outputs.freeze-hash }}
+        restore-keys: |
+          cabal-${{ matrix.os }}-${{ matrix.ghc }}
+
+    - name: Display outdated packages
+      run: cabal outdated
+
     - name: Build dependencies
+      if: steps.restore-cabal.outputs.cache-hit != 'true'
       shell: bash
       run: cabal build --only-dependencies
+
+    - name: Cache Cabal store if necessary
+      if: steps.restore-cabal.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ~/.cabal/store
+        key: cabal-${{ matrix.os }}-${{ matrix.ghc }}-${{ steps.cache-key.outputs.freeze-hash }}
 
     - name: Build
       shell: bash
