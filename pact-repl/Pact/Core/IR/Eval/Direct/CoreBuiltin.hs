@@ -970,7 +970,8 @@ coreReadKeyset info b _env = \case
     readKeyset' info ksn >>= \case
       Just ks -> do
         shouldEnforce <- isExecutionFlagSet FlagEnforceKeyFormats
-        if shouldEnforce && isLeft (enforceKeyFormats (const ()) ks)
+        slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+        if shouldEnforce && isLeft (enforceKeyFormats (const ()) slhDsaDisabled ks)
            then throwExecutionError info (InvalidKeysetFormat ks)
            else return (VGuard (GKeyset ks))
       Nothing -> throwReadError info b
