@@ -27,6 +27,7 @@ module Pact.Core.Guards
 
 -- * Key Format Validation
 , ed25519HexFormat
+, slhKeyFormat
 , webAuthnFormat
 , webAuthnPrefix
 , isValidKeyFormat
@@ -70,7 +71,9 @@ instance Pretty PublicKeyText where
   pretty (PublicKeyText t) = pretty t
 
 renderPublicKeyText :: PublicKeyText -> Text
-renderPublicKeyText = _pubKey
+renderPublicKeyText pkt
+    | "q" `T.isPrefixOf` _pubKey pkt  = T.tail $ _pubKey pkt
+    | otherwise = _pubKey pkt
 
 data KeySetName = KeySetName
   { _keysetName :: Text

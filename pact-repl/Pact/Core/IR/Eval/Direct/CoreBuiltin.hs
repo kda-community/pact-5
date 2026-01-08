@@ -1618,7 +1618,8 @@ coreCompose info b _env = \case
 coreCreatePrincipal :: (IsBuiltin b) => NativeFunction e b i
 coreCreatePrincipal info b _env = \case
   [VGuard g] -> do
-    pr <- createPrincipalForGuard info g
+    slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+    pr <- createPrincipalForGuard info slhDsaDisabled g
     return $ VString $ Pr.mkPrincipalIdent pr
   args -> argsError info b args
 
@@ -1626,14 +1627,16 @@ coreIsPrincipal :: (IsBuiltin b) => NativeFunction e b i
 coreIsPrincipal info b _env = \case
   [VString p] -> do
     chargeGasArgs info $ GStrOp $ StrOpParse $ T.length p
-    return $ VBool $ isRight $ parseOnly Pr.principalParser p
+    slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+    return $ VBool $ isRight $ parseOnly (Pr.principalParser slhDsaDisabled) p
   args -> argsError info b args
 
 coreTypeOfPrincipal :: (IsBuiltin b) => NativeFunction e b i
 coreTypeOfPrincipal info b _env = \case
   [VString p] -> do
     chargeGasArgs info $ GStrOp $ StrOpParse $ T.length p
-    let prty = case parseOnly Pr.principalParser p of
+    slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+    let prty = case parseOnly (Pr.principalParser slhDsaDisabled) p of
           Left _ -> ""
           Right pr -> Pr.showPrincipalType pr
     return $ VString prty
@@ -1642,7 +1645,8 @@ coreTypeOfPrincipal info b _env = \case
 coreValidatePrincipal :: (IsBuiltin b) => NativeFunction e b i
 coreValidatePrincipal info b _env = \case
   [VGuard g, VString s] -> do
-    pr' <- createPrincipalForGuard info g
+    slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+    pr' <- createPrincipalForGuard info slhDsaDisabled g
     chargeGasArgs info $ GComparison $ TextComparison s
     return $ VBool $ Pr.mkPrincipalIdent pr' == s
   args -> argsError info b args
