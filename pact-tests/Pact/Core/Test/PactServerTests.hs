@@ -35,12 +35,10 @@ import Pact.Core.Command.Types
 import Pact.Core.Command.Util
 import Pact.Core.Command.Server.History
 import Pact.Core.Hash
-import Pact.Core.Names
 import Pact.Core.PactValue
 import Pact.Core.Persistence.SQLite
 import Pact.Core.SPV (noSPVSupport)
 import Pact.Core.Serialise
-import Pact.Core.StableEncoding
 import qualified Pact.JSON.Encode as J
 import Servant.API
 import Servant.Client
