@@ -1,9 +1,18 @@
 
-name: Build and publish and optionnaly Release
+name: Build / Release / Benchamrk
 
+# Build on each commit
+# Gasmodel and release must be manually selected.
 on:
   workflow_dispatch:
     inputs:
+
+      gasmodel:
+          description: "Run Gasmodel"
+          type: boolean
+          required: true
+          default: false
+
       release:
           description: "Create a github release"
           type: boolean
@@ -171,10 +180,11 @@ jobs:
 
         OUTPUT_DIR=artifacts/pact
         mkdir -p $OUTPUT_DIR
+        mkdir -p $OUTPUT_DIR/gasmodel/contracts/
         cp $(cabal list-bin pact) $OUTPUT_DIR
         cp $(cabal list-bin profile-tx) $OUTPUT_DIR
         cp $(cabal list-bin core-tests) $OUTPUT_DIR
-        cp $(cabal list-bin gasmodel) $OUTPUT_DIR
+        cp $(cabal list-bin gasmodel) $OUTPUT_DIR/run_gasmodel
         cp CHANGELOG.md $OUTPUT_DIR
         cp README.md $OUTPUT_DIR
         cp LICENSE $OUTPUT_DIR
@@ -182,6 +192,7 @@ jobs:
         cp cabal.project artifacts/pact
         cp cabal.project.local artifacts/pact
         cp cabal.project.freeze artifacts/pact
+        cp gasmodel/contracts/coin-v5-create.pact $OUTPUT_DIR/gasmodel/contracts/
 
         OUTPUT_DIR=artifacts/pact_to_release
         mkdir -p $OUTPUT_DIR
@@ -280,3 +291,52 @@ jobs:
           allowUpdates: true
           replacesArtifacts: true
           updateOnlyUnreleased: true
+
+  gasmodel:
+    runs-on: "ubuntu-24.04"
+    needs: build
+    if: inputs.gasmodel == true
+
+    env:
+      GHC_FOR_BENCHMARKS: "9.10.3"
+      OS_FOR_BENCHMARKS: "ubuntu-24.04"
+      criterion_datadir: ${{ github.workspace }}/html-data
+      js_chart_datadir: ${{ github.workspace }}/html-data
+
+    steps:
+      - name: Download artifacts
+        uses : actions/download-artifact@v5
+        with:
+          pattern: pact-applications.${{ env.GHC_FOR_BENCHMARKS }}.${{ env.OS_FOR_BENCHMARKS }}
+          path: pact_apps
+
+      - name: Download Criterion templates
+        run: |
+          mkdir -p $criterion_datadir/templates
+          cd $criterion_datadir/templates
+          wget https://raw.githubusercontent.com/haskell/criterion/refs/heads/master/templates/criterion.css
+          wget https://raw.githubusercontent.com/haskell/criterion/refs/heads/master/templates/criterion.js
+          wget https://raw.githubusercontent.com/haskell/criterion/refs/heads/master/templates/default.tpl
+          wget https://raw.githubusercontent.com/haskell/criterion/refs/heads/master/templates/json.tpl
+
+          cd ${js_chart_datadir}
+          wget  https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js
+          wget  https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.css
+
+
+      - name: List directory
+        shell: bash
+        run: ls -lR .
+
+      - name: Run gasmodel
+        run: |
+          mkdir -p results
+          cd pact_apps
+          chmod +x run_gasmodel
+          ./run_gasmodel -o ../results/gasmodel_results.html --json ../results/gasmodel_results.json --csv ../results/gasmodel_results.csv
+
+      - name: Publish Gasmodel
+        uses: actions/upload-artifact@v4
+        with:
+          name: gasmodel
+          path: results
