@@ -104,6 +104,16 @@ benchArithBinOp op pdb =
   where
   vals = take 10 $ enumExpText 10 10
 
+benchArithBinHomoOp :: T.Text -> BuiltinBenches
+benchArithBinHomoOp op pdb =
+  [ C.bgroup "integer"
+    [ runNativeBenchmark pdb title [text|($op $x $x)|] | (title, x) <- vals ]
+  , C.bgroup "float"
+    [ runNativeBenchmark pdb title [text|($op $x.0 $x.0)|] | (title, x) <- vals ]
+  ]
+  where
+  vals = take 10 $ enumExpText 10 10
+
 benchPow :: BuiltinBenches
 benchPow pdb =
   [ C.bgroup "integer"
@@ -119,7 +129,7 @@ benchPow pdb =
     [ runNativeBenchmark pdb title [text|(^ 2 $x.0)|] | (title, x) <- floatVals ]
   ]
   where
-  floatVals = take 10 $ enumExpText 10 10
+  floatVals = take 6 $ enumExpText 10 10
 
 benchArithUnOp :: T.Text -> BuiltinBenches
 benchArithUnOp op pdb =
@@ -161,8 +171,8 @@ benchNegate pdb =
   where
   vals = take 3 $ enumExpText 1_000 1_000_000
 
-benchEqOp :: T.Text -> BuiltinBenches
-benchEqOp op pdb =
+benchEqNonArithOp :: T.Text -> BuiltinBenches
+benchEqNonArithOp op pdb =
   [ C.bgroup "lists-same" listsEq
   , C.bgroup "lists-diff" listsNeq
   , C.bgroup "lists-deep" listsDeep
@@ -199,7 +209,7 @@ benchIntegerBinOp growth op pdb =
 
 benchBitwiseFlip :: BuiltinBenches
 benchBitwiseFlip pdb =
-  [ runNativeBenchmark pdb title [text|(~ $x $x)|]
+  [ runNativeBenchmark pdb title [text|(~ $x)|]
   | (title, x) <- take 3 $ enumExpText 1_000 1_000_000
   ]
 
@@ -253,14 +263,6 @@ benchTakeDrop op pdb =
     , (takeTitle, len) <- take 3 $ enumExpNum 1_000 100
     , fromIntegral len <= T.length s
     , let title = strTitle <> "_" <> takeTitle
-    ]
-  , C.bgroup "object"
-    [ runNativeBenchmarkPrepared [("x", obj), ("keys", PList keys)] pdb title [text|($op keys x)|]
-    | (strTitle, obj@(PObject m)) <- take 3 $ enumExpObject 1_000 100
-    , (takeTitle, len) <- take 3 $ enumExpNum 1_000 100
-    , fromIntegral len <= M.size m
-    , let title = strTitle <> "_" <> takeTitle
-    , let keys = V.fromList $ fmap fieldToValue $ take (fromIntegral len) $ M.keys m
     ]
   ]
 
@@ -482,14 +484,14 @@ benchDistinct pdb =
 benchReadOp :: T.Text -> BuiltinBenches
 benchReadOp readOp pdb =
   [ runNativeBenchmarkPreparedEnvMod (msgBody obj) [("k", key)] pdb title [text|($readOp k)|]
-  | (title, PObject obj) <- take 3 $ enumExpObjectWithStrings 100 1_000 100
+  | (title, PObject obj) <- take 3 $ enumExpObjectWithStrings 100 1_000 10
   , let key = fieldToValue $ last $ M.keys obj
   ]
 
 benchReadString :: BuiltinBenches
 benchReadString pdb =
   [ runNativeBenchmarkPreparedEnvMod (msgBody obj) [("k", key)] pdb title "(read-string k)"
-  | (title, PObject obj) <- take 3 $ enumExpObjectWithStrings 10 1_000 100
+  | (title, PObject obj) <- take 3 $ enumExpObjectWithStrings 10 1_000 10
   , let key = fieldToValue $ last $ M.keys obj
   ]
 
@@ -780,12 +782,12 @@ benchesForBuiltin bn = case bn of
   CoreAbs -> benchArithUnOp "abs"
   CorePow -> benchPow
   CoreNot -> omittedDeliberately
-  CoreEq -> benchEqOp "="
-  CoreNeq -> benchEqOp "!="
-  CoreGT -> benchEqOp ">"
-  CoreGEQ -> benchEqOp ">="
-  CoreLT -> benchEqOp "<"
-  CoreLEQ -> benchEqOp "<="
+  CoreEq -> benchEqNonArithOp "=" <> benchArithBinOp "="
+  CoreNeq -> benchEqNonArithOp "!=" <> benchArithBinOp "!="
+  CoreGT -> benchArithBinHomoOp ">"
+  CoreGEQ -> benchArithBinHomoOp ">="
+  CoreLT -> benchArithBinHomoOp "<"
+  CoreLEQ -> benchArithBinHomoOp "<="
   CoreBitwiseAnd -> benchIntegerBinOp 1_000_000 "&"
   CoreBitwiseOr -> benchIntegerBinOp 1_000_000 "|"
   CoreBitwiseXor -> benchIntegerBinOp 1_000_000 "xor"
