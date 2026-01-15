@@ -1,5 +1,5 @@
 
-name: Build / Release / Benchamrk
+name: Build / Release / Benchmark
 
 # Build on each commit
 # Gasmodel and release must be manually selected.
