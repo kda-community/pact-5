@@ -381,10 +381,13 @@ executable gasmodel
   build-depends:
     , pact-tng
     , pact-tng:pact-repl
+    , pact-tng:pact-request-api
+    , pact-tng:pact-crypto
     , criterion
     , terminal-progress-bar
     , neat-interpolation
     , hedgehog
+    , random
     , pact-tng:test-utils
 
   other-modules:
