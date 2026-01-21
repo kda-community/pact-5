@@ -37,6 +37,7 @@ module Pact.Core.Command.Crypto
   , parseEd25519Signature
   , parseWebAuthnPublicKey
   , parseWebAuthnPrivateKey
+  , parseECDSAP256PrivateKey
   , parseWebAuthnSignature
 
   -- * Use an Ed25519 key to sign a payload.
