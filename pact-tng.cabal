@@ -160,8 +160,8 @@ library pact-request-api
   visibility: public
   hs-source-dirs: pact-request-api
   build-depends:
-      asn1-encoding
-    , asn1-types
+      crypton-asn1-encoding
+    , crypton-asn1-types
     , cereal
     , pact-tng
     , pact-tng:pact-crypto
