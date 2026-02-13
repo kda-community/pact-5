@@ -10,6 +10,8 @@ To check whether there are at least two keys that match the keys defined in a ke
 keys-2 count matched
 ```
 
+**Note:** `keys-2` is intendeed to be used in keyset definitions, and not used directly in Pact code.
+
 ### Arguments
 
 Use the following arguments to specify the count of keys in the keyset and the number of matched keys using the `keys-2` Pact function.
