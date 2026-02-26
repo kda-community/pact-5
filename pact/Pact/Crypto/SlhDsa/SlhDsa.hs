@@ -171,7 +171,7 @@ checkPubKeyMatch prm pubkey pkr
 -- FIPS - 205 §10 - SLH-DSA External Functions
 -------------------------------------------------------------------------------
 -- FIPS-205 §10.2.1 and §10.2.2 - Algorithms 22 and 23
-prepareMessage:: SigContext -> OID -> Message -> Either String Message
+prepareMessage:: SigContext -> EncodedOID -> Message -> Either String Message
 prepareMessage context oid msg
     | SB.length context > 255 = Left "Wrong context length"
     | otherwise = Right $ SB.concat [ SB.singleton tag,  SB.singleton contextLen, context, oid,  msg]
@@ -204,7 +204,7 @@ verifySignaturePureWithContext prm ctx pkey rawSig msg = do
 
 -- Verify a pre-hashed signature with context and wrappping according to the FIP-25 in force
 -- We assume the msg comes pre-hashed
-verifySignaturePreHashedWithContext:: Parameter -> SigContext -> OID -> PublickKey -> RawSignature -> Message -> Either String ()
+verifySignaturePreHashedWithContext:: Parameter -> SigContext -> EncodedOID -> PublickKey -> RawSignature -> Message -> Either String ()
 verifySignaturePreHashedWithContext prm ctx oid pkey rawSig msg = do
     pkey' <- keyChecked prm pkey
     sig   <- toSignatureChecked prm rawSig

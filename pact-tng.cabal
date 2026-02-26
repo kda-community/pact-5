@@ -55,6 +55,8 @@ common pact-common
   build-depends:
     , Decimal
     , attoparsec
+    , asn1-encoding
+    , asn1-types
     , base
     , base16-bytestring
     , base64-bytestring

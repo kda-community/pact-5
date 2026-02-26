@@ -8,7 +8,7 @@ module Pact.Crypto.SlhDsa.Utils
 , MessageDigest
 , Node
 , SigContext
-, OID
+, EncodedOID
 , toBase2N
 , toInt
 , ceilDiv
@@ -38,7 +38,7 @@ type PublicKeyRoot = ShortByteString
 ---- Related to data management
 type Message = ShortByteString
 type SigContext = ShortByteString
-type OID = ShortByteString
+type EncodedOID = ShortByteString
 type MessageDigest = ShortByteString
 type Node = ShortByteString -- <-Merkle node
 

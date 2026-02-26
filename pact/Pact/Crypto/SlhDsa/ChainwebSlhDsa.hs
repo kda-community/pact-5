@@ -11,9 +11,13 @@ import Pact.Core.Scheme
 
 import qualified Data.ByteString.Short as SB
 import qualified Data.Text as T
+import qualified Data.List as L
 import qualified Data.Text.Encoding as TE
 import qualified Data.ByteString.Base16 as B16
 import qualified Pact.Core.Crypto.Base64 as B64
+import qualified Data.ASN1.BinaryEncoding as ASN1
+import qualified Data.ASN1.Encoding as ASN1
+import qualified Data.ASN1.Types as ASN1
 
 -- Pact / Chainweb SLH-DSA signatures Spectification
 
@@ -21,15 +25,20 @@ import qualified Pact.Core.Crypto.Base64 as B64
 chainwebContext:: SB.ShortByteString
 chainwebContext = "CHAINWEB"
 
--- TODO: Rechek these OID before freezing the spec
+-- According to RFC-7693 Section 4
+blake2Base :: ASN1.OID
+blake2Base = [1, 3, 6, 1, 4, 1, 1722, 12, 2]
+
+encodeBlake2WithSuffix :: ASN1.OID -> EncodedOID
+encodeBlake2WithSuffix = SB.toShort . ASN1.encodeASN1' ASN1.DER . L.singleton . ASN1.OID . (++) blake2Base
 
 -- 1.3.6.1.4.1.1722.12.2.1.8
-blake2b256Oid:: SB.ShortByteString
-blake2b256Oid = SB.toShort $ B16.decodeLenient "060A2B0601040186BA0C020108"
+blake2b256Asn1:: EncodedOID
+blake2b256Asn1 = encodeBlake2WithSuffix [1, 8]
 
 -- 1.3.6.1.4.1.1722.12.2.1.16
-blake2b512Oid:: SB.ShortByteString
-blake2b512Oid = SB.toShort $ B16.decodeLenient "060A2B0601040186BA0C020110"
+blake2b512Asn1:: EncodedOID
+blake2b512Asn1 = encodeBlake2WithSuffix [1, 16]
 
 -- Auto Select the set of pramaters depending on scheme
 paramaterFromScheme:: PPKScheme -> Either String Parameter
@@ -40,10 +49,10 @@ paramaterFromScheme _ = Left "Unsupported Signature scheme"
 
 
 -- Auto Select the Hash OID based ont the Hash length
-oidFromhash:: Hash -> Either String OID
+oidFromhash:: Hash -> Either String EncodedOID
 oidFromhash txHash
-              | (SB.length . unHash) txHash == 32 = Right blake2b256Oid
-              | (SB.length . unHash) txHash == 64 = Right blake2b512Oid
+              | (SB.length . unHash) txHash == 32 = Right blake2b256Asn1
+              | (SB.length . unHash) txHash == 64 = Right blake2b512Asn1
               | otherwise = Left "Unsupported TxHash"
 
 -- Main entry point for verifying signatures
