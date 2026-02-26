@@ -57,7 +57,7 @@ oidFromhash txHash
 
 -- Main entry point for verifying signatures
 -- TODO Signature spec needs to be finalized
-verifySig:: PPKScheme -> T.Text -> T.Text -> Hash -> Either String ()
+verifySig :: PPKScheme -> T.Text -> T.Text -> Hash -> Either String ()
 verifySig pactScheme pkey sig txHash = do
     decodedPkey <- SB.toShort <$> (B16.decode $ TE.encodeUtf8 pkey)
     decodedSig  <- B64.decodeBase64UrlUnpadded $ TE.encodeUtf8 sig

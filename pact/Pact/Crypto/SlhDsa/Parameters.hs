@@ -31,7 +31,7 @@ data Parameter = Parameter { n:: Int
                            , fips205Tl::   PublicKeySeed   -> Address -> [ShortByteString]                  -> ShortByteString
                            }
 
-slh_dsa_sha2_128s:: Parameter
+slh_dsa_sha2_128s :: Parameter
 slh_dsa_sha2_128s = Parameter n' -- -> n
                               63 -- -> h
                               7  -- -> d
@@ -50,7 +50,7 @@ slh_dsa_sha2_128s = Parameter n' -- -> n
                               toSeed' = SB.take n'
                               toRoot' = SB.takeEnd n'
 
-slh_dsa_sha2_192s:: Parameter
+slh_dsa_sha2_192s :: Parameter
 slh_dsa_sha2_192s = Parameter n' -- -> n
                               63 -- -> h
                               7  -- -> d
@@ -69,7 +69,7 @@ slh_dsa_sha2_192s = Parameter n' -- -> n
                               toSeed' = SB.take n'
                               toRoot' = SB.takeEnd n'
 
-slh_dsa_sha2_256s:: Parameter
+slh_dsa_sha2_256s :: Parameter
 slh_dsa_sha2_256s = Parameter n' -- -> n
                               64 -- -> h
                               8  -- -> d
