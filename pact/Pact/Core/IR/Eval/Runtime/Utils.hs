@@ -8,6 +8,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE BlockArguments #-}
 
 module Pact.Core.IR.Eval.Runtime.Utils
  ( checkSigCaps
@@ -63,6 +64,8 @@ module Pact.Core.IR.Eval.Runtime.Utils
  , lookupFqNameOrFail
  , isCapInStack
  , isCapInStack'
+ , timeChecked
+ , deltaChecked
  ) where
 
 import Control.Lens hiding (from, to)
@@ -75,9 +78,13 @@ import Data.Maybe(maybeToList)
 import Data.Text(Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import qualified Pact.Time.Internal as PT (divNominalDiffTime)
+import qualified Pact.Time as PT
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 import qualified Data.Set as S
+import Data.Decimal (Decimal)
+
 
 import Pact.Core.Names
 import Pact.Core.PactValue
@@ -689,3 +696,24 @@ isCapInStack'
   -> EvalM e b i Bool
 isCapInStack' (CapToken fqn args) =
   isCapInStack (CapToken (fqnToQualName fqn) args)
+
+minSafeDiffTime:: PT.NominalDiffTime
+minSafeDiffTime = succ $ PT.divNominalDiffTime minBound (2::Int)
+
+maxSafeDiffTime:: PT.NominalDiffTime
+maxSafeDiffTime = pred $ PT.divNominalDiffTime maxBound (2::Int)
+
+deltaChecked :: i -> Decimal -> EvalM e b i Decimal
+deltaChecked info delta = do
+  unlessExecutionFlagSet FlagDisableSafeTime if delta <= PT.toSeconds minSafeDiffTime || delta >= PT.toSeconds maxSafeDiffTime
+                                             then throwExecutionError info TimeOverflowError
+                                             else return ()
+  return delta
+
+
+timeChecked :: i -> PT.UTCTime -> EvalM e b i PT.UTCTime
+timeChecked info t = do
+  unlessExecutionFlagSet FlagDisableSafeTime if t <= (PT.mjdEpoch PT..+^ minSafeDiffTime) || t >= (PT.mjdEpoch PT..+^ maxSafeDiffTime)
+                                             then throwExecutionError info TimeOverflowError
+                                             else return ()
+  return t

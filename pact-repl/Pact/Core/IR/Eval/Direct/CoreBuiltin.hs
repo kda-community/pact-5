@@ -1467,7 +1467,9 @@ parseTime info b _env = \case
   [VString fmt, VString s] -> do
     chargeGasArgs info $ GStrOp $ StrOpParseTime (T.length fmt) (T.length s)
     case PactTime.parseTime (T.unpack fmt) (T.unpack s) of
-      Just t -> return $ VPactValue (PTime t)
+      Just t -> do
+        t' <- timeChecked info t
+        return $ VPactValue (PTime t')
       Nothing ->
         throwNativeExecutionError info b $ "parse-time parse failure"
   args -> argsError info b args
@@ -1484,7 +1486,9 @@ time :: (IsBuiltin b) => NativeFunction e b i
 time info b _env = \case
   [VString s] -> do
     case PactTime.parseTime "%Y-%m-%dT%H:%M:%SZ" (T.unpack s) of
-      Just t -> return $ VPactValue (PTime t)
+      Just t -> do
+        t' <- timeChecked info t
+        return $ VPactValue (PTime t')
       Nothing ->
         throwNativeExecutionError info b $ "time default format parse failure"
   args -> argsError info b args
@@ -1492,10 +1496,12 @@ time info b _env = \case
 addTime :: (IsBuiltin b) => NativeFunction e b i
 addTime info b _env = \case
   [VPactValue (PTime t), VPactValue (PDecimal seconds)] -> do
-      let newTime = t PactTime..+^ PactTime.fromSeconds seconds
+      seconds' <- deltaChecked info seconds
+      newTime <- timeChecked info $ t PactTime..+^ PactTime.fromSeconds seconds'
       return $ VPactValue (PTime newTime)
   [VPactValue (PTime t), VPactValue (PInteger seconds)] -> do
-      let newTime = t PactTime..+^ PactTime.fromSeconds (fromIntegral seconds)
+      seconds' <- deltaChecked info $ fromIntegral seconds
+      newTime <- timeChecked info $ t PactTime..+^ PactTime.fromSeconds seconds'
       return $ VPactValue (PTime newTime)
   args -> argsError info b args
 

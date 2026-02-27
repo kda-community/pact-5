@@ -89,6 +89,7 @@ module Pact.Core.Errors
  , _InvalidBlessedHash
  , _ArrayOutOfBoundsException
  , _ArithmeticException
+ , _TimeOverflowError
  , _EnumerationError
  , _DecodeError
  , _GasExceeded
@@ -567,6 +568,8 @@ data EvalError
   -- ^ Array index out of bounds <length> <index>
   | ArithmeticException Text
   -- ^ Arithmetic error <cause>
+  | TimeOverflowError
+  -- ^ A possible overflow is detected in time
   | EnumerationError Text
   -- ^ Enumeration error (e.g incorrect bounds with step
   | DecodeError Text
@@ -763,6 +766,8 @@ instance Pretty EvalError where
       , Pretty.parens (pretty ix)]
     ArithmeticException txt ->
       Pretty.hsep ["Arithmetic exception:", pretty txt]
+    TimeOverflowError ->
+      "Time overflow : too far in the past or in the future"
     EnumerationError txt ->
       Pretty.hsep ["Enumeration error:", pretty txt]
     DecodeError txt ->
@@ -1423,6 +1428,8 @@ evalErrorToBoundedText = mkBoundedText . \case
     , tInt ix]
   ArithmeticException txt ->
     thsep ["Arithmetic exception:", txt]
+  TimeOverflowError ->
+    "Time overflow"
   EnumerationError txt ->
     thsep ["Enumeration error:", txt]
   DecodeError txt ->
