@@ -568,8 +568,6 @@ data EvalError
   -- ^ Array index out of bounds <length> <index>
   | ArithmeticException Text
   -- ^ Arithmetic error <cause>
-  | TimeOverflowError
-  -- ^ A possible overflow is detected in time
   | EnumerationError Text
   -- ^ Enumeration error (e.g incorrect bounds with step
   | DecodeError Text
@@ -737,6 +735,8 @@ data EvalError
   -- ^ Keccak256 failure
   | TypecheckingFailure ModuleName Text
   -- ^ Typechecking failure
+  | TimeOverflowError
+  -- ^ A possible overflow is detected in time
   deriving (Eq, Show, Generic)
 
 data ErrorClosureType
