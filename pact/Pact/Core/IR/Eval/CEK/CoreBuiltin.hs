@@ -913,11 +913,13 @@ coreReadMsg info b cont handler _env = \case
       PObject envData -> do
         chargeGasArgs info $ GObjOp $ ObjOpLookup s $ M.size envData
         case M.lookup (Field s) envData of
-          Just pv -> returnCEKValue cont handler (VPactValue pv)
+          Just pv -> do
+            pv' <- timeCheckedInPactValue info pv
+            returnCEKValue cont handler (VPactValue pv')
           _ -> throwReadError info cont handler b
       _ -> throwReadError info cont handler b
   [] -> do
-    envData <- viewEvalEnv eeMsgBody
+    envData <- timeCheckedInPactValue info =<< viewEvalEnv eeMsgBody
     returnCEKValue cont handler (VPactValue envData)
   args -> argsError info b args
 

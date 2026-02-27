@@ -66,6 +66,7 @@ module Pact.Core.IR.Eval.Runtime.Utils
  , isCapInStack'
  , timeChecked
  , deltaChecked
+ , timeCheckedInPactValue
  ) where
 
 import Control.Lens hiding (from, to)
@@ -717,3 +718,12 @@ timeChecked info t = do
                                              then throwExecutionError info TimeOverflowError
                                              else return ()
   return t
+
+-- Recursively check invalid datetimes in a complex nested PactValue
+timeCheckedInPactValue :: i -> PactValue -> EvalM e b i PactValue
+timeCheckedInPactValue info pv = go pv >> return pv
+  where
+    go (PTime t) = void $ timeChecked info t
+    go (PList pl) = mapM_ go pl
+    go (PObject po) = mapM_ go po
+    go _ = return ()

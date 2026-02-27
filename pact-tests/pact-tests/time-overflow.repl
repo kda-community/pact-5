@@ -13,7 +13,9 @@
 (defconst MINUS_300K_YEARS (- PLUS_300K_YEARS))
 
 (defconst TODAY "2026-02-26T00:00:00Z")
+(defconst TODAY_PRECISE "2026-02-26T00:00:00.123456Z")
 (defconst LONG_TIME_IN_FUTURE "294134-11-26T00:00:00Z")
+(defconst LONG_TIME_IN_FUTURE_PRECISE "294134-11-26T00:00:00.123456Z")
 (defconst LONG_TIME_IN_PAST "-290000-11-07T00:00:00Z")
 
 ; Do sanity checks
@@ -35,6 +37,20 @@
 
 ; Diff time between FUTURE and PAST => Overflow, we obtain a negative number
 (expect "Time diff is negative, should be positive in theory" -13253875309.551616 (diff-time (time LONG_TIME_IN_FUTURE) (time LONG_TIME_IN_PAST)))
+
+; Check that problematic datetime can be read from the env data
+(env-data {"a": {"time":LONG_TIME_IN_FUTURE}})
+(expect-that "Read OK" (compose (format-time "%F") (= "294134-11-26")) (read-msg 'a))
+
+(env-data {"a": {"timep":LONG_TIME_IN_FUTURE_PRECISE}})
+(expect-that "Read OK" (compose (format-time "%F") (= "294134-11-26")) (read-msg 'a))
+
+(env-data {"a": [{"time":LONG_TIME_IN_FUTURE}]})
+(expect-that "Read OK" (compose (format-time "%F") (= "294134-11-26")) (at 0 (read-msg 'a)))
+
+(env-data {"a": {"my-field": {"time":LONG_TIME_IN_FUTURE}}})
+(expect-that "Read OK" (compose (format-time "%F") (= "294134-11-26")) (at 'my-field (read-msg 'a)))
+
 (commit-tx)
 
 
@@ -63,6 +79,33 @@
 (expect-failure "Time overflow" "Time overflow" (add-time (time LONG_TIME_IN_PAST) MINUS_1K_YEARS))
 
 (expect-failure "Time overflow" "Time overflow" (diff-time (time LONG_TIME_IN_FUTURE) (time LONG_TIME_IN_PAST)))
+
+; Check that problematic datetime can NOT  be read from the env data
+(env-data {"a": {"time":LONG_TIME_IN_FUTURE}})
+(expect-failure "Time overflow" "Time overflow" (read-msg 'a))
+
+(env-data {"a": {"timep":LONG_TIME_IN_FUTURE_PRECISE}})
+(expect-failure "Time overflow" "Time overflow" (read-msg 'a))
+
+(env-data {"a": [{"time":LONG_TIME_IN_FUTURE}]})
+(expect-failure "Time overflow" "Time overflow" (at 0 (read-msg 'a)))
+
+(env-data {"a": {"my-field": {"time":LONG_TIME_IN_FUTURE}}})
+(expect-failure "Time overflow" "Time overflow" (at 'my-field (read-msg 'a)))
+
+
+; But valid datetime can still be read
+(env-data {"a": {"time":TODAY}})
+(expect-that "Read OK" (compose (format-time "%F") (= "2026-02-26")) (read-msg 'a))
+
+(env-data {"a": {"timep":TODAY_PRECISE}})
+(expect-that "Read OK" (compose (format-time "%F") (= "2026-02-26")) (read-msg 'a))
+
+(env-data {"a": [{"time":TODAY}]})
+(expect-that "Read OK" (compose (format-time "%F") (= "2026-02-26")) (at 0 (read-msg 'a)))
+
+(env-data {"a": {"my-field": {"time":TODAY}}})
+(expect-that "Read OK" (compose (format-time "%F") (= "2026-02-26")) (at 'my-field (read-msg 'a)))
 
 (commit-tx)
 
