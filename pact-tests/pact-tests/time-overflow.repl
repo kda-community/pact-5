@@ -45,15 +45,6 @@
 ; Do exact same thing but remove the flag
 
 (env-exec-config [])
-(defconst PLUS_1K_YEARS (* 1000.0 (days 365.2425)))
-(defconst MINUS_1K_YEARS (- PLUS_1K_YEARS))
-
-(defconst PLUS_300K_YEARS (* 300000.0 (days 365.2425)))
-(defconst MINUS_300K_YEARS (- PLUS_300K_YEARS))
-
-(defconst TODAY "2026-02-26T00:00:00Z")
-
-;(defconst LONG_TIME_IN_FUTURE (time "200026-02-26T00:00:00Z"))
 
 ; Do sanity checks
 (expect-that "Adding small quantities of time is OK"    (compose (format-time "%F") (= "3026-02-26")) (add-time (time TODAY) PLUS_1K_YEARS))
