@@ -187,7 +187,7 @@ data ExecutionFlag
   | FlagDisablePact54
   -- | Flag to enable modref read-only mode
   | FlagDisableReentrancyCheck
-  -- | Flag to disable owverflow check
+  -- | Flag to disable overflow check
   | FlagDisableSafeTime
   deriving (Eq,Ord,Show,Enum,Bounded, Generic)
 
