@@ -2,6 +2,10 @@
 
 Use `hyperlane-encode-token-message` to encode an object into a Hyperlane Token message as an unpadded base64url string.
 
+This token message format is proprietry to Kadena and different from the standard Hyperlane token packing.
+For reference: (see [EVM Implementation](https://github.com/kinesis-bridge/smart-contracts/blob/main/typescript/contracts/TokenMessage.sol) )
+
+
 ### Basic syntax
 
 To encode an object into a Hyperlane Token message using `hyperlane-encode-token-message`, use the following syntax:
