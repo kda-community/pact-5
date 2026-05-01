@@ -131,7 +131,7 @@ coreExpectThat info b cont handler _env = \case
           let successMsg = "Expect-that: success " <> testName
           returnTestSuccess info testName cont handler successMsg
         else do
-          let failureMsg = "FAILURE: Expect-that: Did not satisfy condition: " <> testName
+          let failureMsg = "FAILURE: Expect-that: Did not satisfy condition: " <> testName <> ", received: " <> prettyShowValue v
           returnTestFailure info testName cont handler failureMsg
       EvalValue _ -> do
         recordTestFailure testName info "FAILURE: expect-that expression did not return a boolean"

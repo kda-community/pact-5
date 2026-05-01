@@ -21,10 +21,8 @@ import Pact.Core.Command.Crypto
 import Pact.Core.Command.Client
 import qualified Pact.JSON.Encode as J
 import Pact.Core.PactValue
-import Pact.Core.Hash
 import Pact.Core.Command.RPC
 import Pact.Core.Command.Util
-import Pact.Core.Signer
 
 
 ---- HELPER DATA TYPES AND FUNCTIONS ----

@@ -30,6 +30,11 @@
 
 module Pact.Core.Command.Types
   ( Command(..),cmdPayload,cmdSigs,cmdHash
+  , PactHash.Hash
+  , PactHash.parseHash
+  , PactHash.hash
+  , PublicMeta(..)
+  , StableEncoding(..)
   , verifyUserSig
   , verifyUserSigs
   , verifyCommand
@@ -42,6 +47,17 @@ module Pact.Core.Command.Types
   , Signer(..),siScheme, siPubKey, siAddress, siCapList
   , UserSig(..)
   , PactResult(..)
+  , SigCapability(..)
+  , CapToken(..)
+  , QualifiedName(..)
+  , PublicKeyText(..)
+  , DefPactId(..)
+  , Verifier
+  , ParsedVerifierProof
+  , ChainId
+  , GasLimit
+  , TTLSeconds
+  , NetworkId
   , _PactResultOk
   , _PactResultErr
   , CommandResult(..),crReqKey,crTxId,crResult,crGas,crLogs,crEvents
@@ -79,6 +95,7 @@ import Pact.Core.Capabilities
 import Pact.Core.ChainData
 import Pact.Core.DefPacts.Types
 import Pact.Core.Guards
+import Pact.Core.Names
 import Pact.Core.Gas.Types
 import qualified Pact.Core.Hash as PactHash
 import Pact.Core.Persistence.Types
