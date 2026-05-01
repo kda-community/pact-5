@@ -75,8 +75,8 @@ common pact-common
     , vector
     , vector-algorithms
     , megaparsec
-    , crypton
-    , memory
+    , crypton >=1.1.2
+    , ram >=0.2.2 
     , safe-exceptions
     , ralist >= 0.4.0.0
     , haskeline
@@ -130,8 +130,8 @@ library pact-request-api
   visibility: public
   hs-source-dirs: pact-request-api
   build-depends:
-      asn1-encoding
-    , asn1-types
+      crypton-asn1-encoding
+    , crypton-asn1-types
     , cereal
     , pact-tng
     , yaml

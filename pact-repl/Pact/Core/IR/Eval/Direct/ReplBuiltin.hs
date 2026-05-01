@@ -114,7 +114,7 @@ coreExpectThat info b _env = \case
     applyLamUnsafe info vclo [v] >>= \case
       VLiteral (LBool c) ->
         if c then returnTestSuccess info testName ("Expect-that: success " <> testName)
-        else returnTestFailure info testName ("FAILURE: Expect-that: Did not satisfy condition: " <> testName)
+        else returnTestFailure info testName ("FAILURE: Expect-that: Did not satisfy condition: " <> testName  <> ", received: " <> prettyShowValue v)
       _ -> do
         recordTestFailure testName info "FAILURE: expect-that expression did not return a boolean"
         throwNativeExecutionError info b "Expect-that: condition did not return a boolean"
