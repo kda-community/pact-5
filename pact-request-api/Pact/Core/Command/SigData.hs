@@ -37,7 +37,6 @@ import Pact.Core.Command.Types
 import qualified Pact.JSON.Encode as J
 
 import qualified Pact.JSON.Legacy.HashMap as LHM
-import Pact.Core.Hash
 import Data.Maybe (catMaybes)
 import Pact.Core.Command.Util
 import Data.Bifunctor (first)

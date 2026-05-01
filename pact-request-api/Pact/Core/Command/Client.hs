@@ -14,6 +14,7 @@ module Pact.Core.Command.Client (
   ApiSigner(..),
   ApiPublicMeta(..),
   ApiReq(..),
+  PactValue(..),
   AddSigsReq(..),
   mkKeyPairs,
   apiReq,
@@ -25,6 +26,7 @@ module Pact.Core.Command.Client (
   mkExec,
   mkCont,
   addSigsReq,
+  SigCapability,
   combineSigs,
   combineSigDatas,
   signCmd,
@@ -76,13 +78,9 @@ import Pact.Core.Command.Util
 import Pact.Core.Command.Crypto
 import Pact.Core.Guards
 import Pact.Core.PactValue
-import Pact.Core.Names
-import Pact.Core.Verifiers
-import Pact.Core.StableEncoding
 import Pact.Core.Gas
 import Pact.Core.Hash
 import Pact.Core.SPV
-import Pact.Core.Signer
 import qualified Pact.Core.Hash as PactHash
 import Pact.Core.Command.SigData
 import Pact.Core.Pretty (renderCompactString)
