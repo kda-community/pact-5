@@ -55,14 +55,14 @@ common pact-common
   build-depends:
     , Decimal
     , attoparsec
-    , asn1-encoding
-    , asn1-types
     , base
     , base16-bytestring
     , base64-bytestring
     , bytestring
     , cereal
     , containers
+    , crypton-asn1-encoding
+    , crypton-asn1-types
     , data-default
     , deepseq
     , direct-sqlite
@@ -162,8 +162,8 @@ library pact-request-api
   visibility: public
   hs-source-dirs: pact-request-api
   build-depends:
-      crypton-asn1-encoding
-    , crypton-asn1-types
+      crypton--encoding
+    , crypton--types
     , cereal
     , pact-tng
     , pact-tng:pact-crypto
