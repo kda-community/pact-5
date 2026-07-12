@@ -2005,7 +2005,7 @@ coreHyperlaneMessageId info b _env = \case
 
 coreHyperlaneEncodeTokenMessage :: (IsBuiltin b) => NativeFunction e b i
 coreHyperlaneEncodeTokenMessage info b _env = \case
-  [VObject o] ->  case decodeHyperlaneTokenMessageObject o of
+  [VObject o] ->  case decodeHyperlaneTokenMessageObject Lenient o of
     Left e -> throwExecutionError info $ HyperlaneError e
     Right r -> do
       let encoded = T.decodeUtf8 $ encodeBase64UrlUnpadded $ BS.toStrict $ Bin.runPut $ Bin.putBuilder $ packTokenMessageERC20 r

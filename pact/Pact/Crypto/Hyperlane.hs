@@ -19,6 +19,7 @@ module Pact.Crypto.Hyperlane
   , packTokenMessageERC20
   , unpackTokenMessageERC20
   , tokenMessageToTerm
+  , TokenMessageEncodingRules(..)
   , decodeHyperlaneTokenMessageObject
   , getHyperlaneMessageId
   , eof
@@ -47,7 +48,7 @@ import Data.WideWord.Word256 (Word256(..))
 import Data.Word (Word8, Word16, Word32)
 import Ethereum.Misc (keccak256, _getKeccak256Hash, _getBytesN)
 import Pact.JSON.Decode qualified as J
-import Pact.Core.StableEncoding 
+import Pact.Core.StableEncoding
 
 import Pact.Core.Errors
 import Pact.Core.PactValue
@@ -74,7 +75,7 @@ data HyperlaneMessage = HyperlaneMessage
 data TokenMessageERC20 = TokenMessageERC20
   { tmAmount :: Word256 -- uint256
   , tmChainId :: Word16 -- uint16
-  , tmRecipient :: ByteString -- variable
+  , tmRecipient :: ByteString -- 32x uint8 in case of KDA->EVM , variable in case of EVM->KDA
   }
   deriving stock (Eq, Show)
 
@@ -185,13 +186,19 @@ decodeHyperlaneMessageObject om = do
 -- This is because the necessary alignment is done on the chain —
 -- since we use a different set of tokens that with different
 -- precisions (e.g. USDC with precision 6).
-decodeHyperlaneTokenMessageObject :: Map Field PactValue -> Either HyperlaneError TokenMessageERC20
-decodeHyperlaneTokenMessageObject om = do
-  tmRecipient <- decodeBase64 (Field "recipient") =<< grabField om (Field "recipient") _LString
-  tmAmount    <- decimalToWord <$> grabField om (Field "amount") _LDecimal
-  tmChainId   <- parseChainId =<< grabField om (Field "chainId") _LString
 
+data TokenMessageEncodingRules = Lenient | Hardened
+
+decodeHyperlaneTokenMessageObject :: TokenMessageEncodingRules -> Map Field PactValue -> Either HyperlaneError TokenMessageERC20
+decodeHyperlaneTokenMessageObject rules om = do
+  tmRecipient <- decodeBase64Recipient =<< grabField om (Field "recipient") _LString
+  tmAmount    <- decimalToWord rules (Field "amount") =<< grabField om (Field "amount") _LDecimal
+  tmChainId   <- parseChainId =<< grabField om (Field "chainId") _LString
   pure TokenMessageERC20{..}
+    where
+      decodeBase64Recipient = case rules of
+        Lenient -> decodeBase64 (Field "recipient")
+        Hardened -> decodeBase64AndValidate (Field "recipient") 32
 
 ----------------------------------------------
 --                Utilities                 --
@@ -200,8 +207,14 @@ decodeHyperlaneTokenMessageObject om = do
 wordToDecimal :: Word256 -> Decimal
 wordToDecimal w = fromRational (toInteger w % ethInWei)
 
-decimalToWord :: Decimal -> Word256
-decimalToWord = round -- we don't multiply by ethInWei here as the data on chain is already correct
+decimalToWord :: TokenMessageEncodingRules -> Field -> Decimal -> Either HyperlaneError Word256
+decimalToWord Lenient _ = Right . round -- we don't multiply by ethInWei here as the data on chain is already correct
+decimalToWord Hardened key = toWord256Safe . floor
+  where
+    toWord256Safe :: Integer -> Either HyperlaneError Word256
+    toWord256Safe x
+      | x >=0 && x <= toInteger (maxBound :: Word256) = Right $ fromInteger x
+      | otherwise = Left $ HyperlaneErrorNumberOutOfBounds key
 
 ethInWei :: Num a => a
 ethInWei = 1_000_000_000_000_000_000 -- 1e18
