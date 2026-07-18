@@ -1,4 +1,4 @@
-cabal-version:       3.8
+cabal-version:       3.16
 name:                pact-tng
 version:             5.4
 -- ^ 4 digit is prerelease, 3- or 2-digit for prod release
@@ -55,7 +55,7 @@ common pact-common
   build-depends:
     , Decimal
     , attoparsec
-    , base
+    , base >= 4.22
     , base16-bytestring
     , base64-bytestring
     , bytestring
@@ -80,7 +80,7 @@ common pact-common
     , vector-algorithms
     , megaparsec
     , crypton >=1.1.2
-    , ram >=0.2.2 
+    , ram >=0.2.2
     , safe-exceptions
     , ralist >= 0.4.0.0
     , haskeline
@@ -166,8 +166,8 @@ library pact-request-api
     , pact-tng:pact-crypto
     , yaml
     , lrucaching
-    , servant-server
-    , servant
+    , servant-server >= 0.20.3
+    , servant >= 0.20.3
     , warp
     , wai-cors
     , wai-logger
@@ -568,9 +568,9 @@ test-suite core-tests
     , safe-exceptions
     , http-conduit
     , direct-sqlite
-    , servant
-    , servant-server
-    , servant-client
+    , servant >= 0.20.3
+    , servant-server >= 0.20.3
+    , servant-client >= 0.20.3
     , lrucaching
     , http-client
     , warp

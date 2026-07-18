@@ -47,11 +47,24 @@ source-repository-package
   tag: 8df1cff7f279750490fea8ff580294f3e5a3fcaf
   --sha256: sha256-HyWTEtw/dKQduXl5avRckS0oNc9Z5yxeUxvX09wDkDY=
 
-allow-newer: servant-server:*
-allow-newer: servant-client-core:*
-allow-newer: servant-client:*
-allow-newer: servant:*
+
+allow-newer: http-media:containers
 allow-newer: tasty-wai:*
-allow-newer: *:hashable
+
+
+-- To be removed when Servant release an official enabled 9.14 version
+allow-newer: servant-server:*
+allow-newer: servant:*
+allow-newer: servant-client:*
+allow-newer: servant-client-core:*
+
+-- To be removed when CBORG release an official enabled 9.14 version
+allow-newer: serialise:base,
+allow-newer: serialise:containers
+allow-newer: cborg:base
+allow-newer: cborg:containers
+
+-- To be removed when Ordered-containers release an official enabled 9.14 version
+allow-newer: ordered-containers:containers
 
 tests: True
