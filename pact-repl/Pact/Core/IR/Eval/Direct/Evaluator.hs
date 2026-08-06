@@ -58,7 +58,7 @@ import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import qualified Data.List.NonEmpty as NE
 
-#ifdef WITH_TRACING
+#ifdef WITH_FUNCALL_TRACING
 import System.Clock
 #endif
 
