@@ -80,7 +80,7 @@ common pact-common
     , vector-algorithms
     , megaparsec
     , crypton >=1.1.2
-    , ram >=0.2.2 
+    , ram >=0.2.2
     , safe-exceptions
     , ralist >= 0.4.0.0
     , haskeline
@@ -104,7 +104,6 @@ common pact-common
     -- hyperlane deps
     , binary
     , wide-word
-    , ethereum
     , template-haskell
     , pact-tng:unsafe
 
@@ -141,7 +140,8 @@ library pact-crypto
     , text
     , base64-bytestring
     , bytestring
-    , hashes >= 0.3
+    , ram >=0.2.2
+    , crypton
     , safe-exceptions
     , deepseq
 
@@ -580,7 +580,6 @@ test-suite core-tests
     , wai-logger
     , fast-logger
     , property-matchers
-    , hashes >= 0.3
 
   other-modules:
     , Pact.Core.Test.CommandTests
