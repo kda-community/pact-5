@@ -9,7 +9,12 @@ package pact-tng
     --
     -- So we silence this warning, as it's annoying to see so often when it's ultimately
     -- inconsequential.
-    ghc-options: -Wno-missed-extra-shared-lib
+    ghc-options: -O2 -Wno-missed-extra-shared-lib
+
+
+package direct-sqlite
+    ghc-options: -O2 -optc-O2
+
 
 if os(darwin)
     if arch(aarch64)
