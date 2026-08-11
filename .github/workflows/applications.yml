@@ -58,13 +58,14 @@ jobs:
     
     steps:
       - name: Delete caches
-        run: gh cache delete --all
+        run: gh cache delete --all --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
   
   
   build:
-    if: "!startsWith(github.ref, 'refs/tags/')"
+    needs: cleanup
+    if: always()
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
