@@ -4,8 +4,17 @@ name: Build / Release / Benchmark
 # Build on each commit
 # Gasmodel and release must be manually selected.
 on:
+
+  schedule:
+    - cron: '36 4 * * *'
+
   workflow_dispatch:
     inputs:
+
+      cleanup:
+        description: 'Delete caches'
+        type: boolean
+        default: false
 
       gasmodel:
           description: "Run Gasmodel"
@@ -38,6 +47,22 @@ on:
     - '.github/workflows/applications.yml'
 
 jobs:
+
+  cleanup:
+    if: github.event_name == 'schedule' || inputs.cleanup
+    runs-on: ubuntu-latest
+    
+    permissions:
+      actions: write
+      contents: read
+    
+    steps:
+      - name: Delete caches
+        run: gh cache delete --all
+        env:
+          GH_TOKEN: ${{ github.token }}
+  
+  
   build:
     if: "!startsWith(github.ref, 'refs/tags/')"
     runs-on: ${{ matrix.os }}
