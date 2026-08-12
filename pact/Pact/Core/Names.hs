@@ -97,6 +97,7 @@ import qualified Text.Megaparsec.Char as MP
 import qualified Pact.JSON.Encode as J
 
 import Pact.Core.Hash
+import Pact.Core.Base64
 import Pact.Core.Pretty hiding (dot)
 import qualified Data.Text.Encoding as T
 import qualified Data.ByteString.Short as SB

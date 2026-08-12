@@ -6,7 +6,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
 
-module Pact.Core.Crypto.Hash.Poseidon (poseidon) where
+module Pact.Crypto.Hash.Poseidon (poseidon) where
 
 import qualified Data.Primitive.Array as Array
 import qualified Data.Primitive.SmallArray as SmallArray

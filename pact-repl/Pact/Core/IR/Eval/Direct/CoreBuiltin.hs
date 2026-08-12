@@ -44,10 +44,7 @@ import qualified Data.List as L
 import System.Clock
 #endif
 
-#ifndef WITHOUT_CRYPTO
 import qualified Control.Lens as Lens
-#endif
-
 import qualified Data.Vector.Algorithms.Intro as V
 import qualified Data.Char as Char
 import qualified Data.ByteString as BS
@@ -62,6 +59,7 @@ import Pact.Core.Type
 import Pact.Core.Errors
 import Pact.Core.PactValue
 import Pact.Core.Hash
+import Pact.Core.Base64
 import Pact.Core.Persistence
 import Pact.Core.Guards
 import Pact.Core.Capabilities
@@ -80,11 +78,9 @@ import qualified Data.Binary.Put as Bin
 
 
 import Pact.Core.Namespace
-#ifndef WITHOUT_CRYPTO
-import Pact.Core.Crypto.Pairing
-import Pact.Core.Crypto.Hash.Poseidon
-import Pact.Core.Crypto.Hash.Keccak256
-#endif
+import Pact.Crypto.Pairing
+import Pact.Crypto.Hash.Poseidon
+import Pact.Crypto.Hash.Keccak256
 import Pact.Core.SizeOf
 
 
@@ -1772,7 +1768,6 @@ coreChainData info b _env = \case
 -- ZK defns
 -- -------------------------
 
-#ifndef WITHOUT_CRYPTO
 ensureOnCurve :: (Num p, Eq p) => i -> CurvePoint p -> p -> EvalM e b i ()
 ensureOnCurve info p bp = unless (isOnCurve p bp) $ throwExecutionError info PointNotOnCurve
 
@@ -1920,26 +1915,6 @@ coreHashKeccak256 info b _env = \case
           Right output -> pure output
     return (VString output)
   args -> argsError info b args
-
-
-#else
-
-zkPairingCheck :: (IsBuiltin b) => NativeFunction e b i
-zkPairingCheck info _b _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-zkScalarMult :: (IsBuiltin b) => NativeFunction e b i
-zkScalarMult info _b _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-zkPointAddition :: (IsBuiltin b) => NativeFunction e b i
-zkPointAddition info _b _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-poseidonHash :: (IsBuiltin b) => NativeFunction e b i
-poseidonHash info _b _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-coreHashKeccak256 :: (IsBuiltin b) => NativeFunction e b i
-coreHashKeccak256 info _b _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-#endif
 
 -----------------------------------
 -- SPV

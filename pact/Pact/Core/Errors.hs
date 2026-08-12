@@ -225,7 +225,7 @@ import Pact.Core.DeriveConTag
 import Pact.Core.ChainData (ChainId(_chainId))
 import Data.String (IsString(..))
 import Pact.Core.Gas.Types
-import Pact.Core.Crypto.Hash.Keccak256
+import Pact.Crypto.Hash.Keccak256
 import qualified Text.Megaparsec as MP
 import qualified Text.Megaparsec.Char as MP
 import Text.Read (readMaybe)

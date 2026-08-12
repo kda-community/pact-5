@@ -10,7 +10,7 @@
 -- Maintainer: Lars Kuhtz <lars@kadena.io>
 -- Stability: experimental
 --
-module Pact.Core.Crypto.Pairing.Fields
+module Pact.Crypto.Pairing.Fields
 ( GaloisField(..)
 , Fq(..)
 ) where
@@ -78,4 +78,3 @@ instance GaloisField Fq where
   degree _ = 1
 
   frobenius = id
-

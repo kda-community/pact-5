@@ -36,7 +36,6 @@ import qualified Data.Vector as V
 import qualified Data.Attoparsec.Text as AP
 import Data.Decimal (Decimal)
 import Pact.Time
-import qualified Pact.Core.Hash as PC
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as A
@@ -47,7 +46,7 @@ import Pact.JSON.Legacy.Hashable
 import Data.String (IsString, fromString)
 import Data.List (sort)
 import Text.Trifecta (ident,TokenParsing,(<?>),dot, alphaNum, between, char, CharParsing, IdentifierStyle(..), letter,  digit, oneOf)
-import Pact.Core.Hash (decodeBase64UrlUnpadded)
+import Pact.Core.Base64 (decodeBase64UrlUnpadded)
 import Text.Parser.Token.Highlight
 import Data.Hashable
 import Control.Applicative
@@ -223,13 +222,13 @@ newtype Hash = Hash { unHash :: ShortByteString }
   deriving (Eq, Ord, Generic, Hashable,LegacyHashable, Show)
 
 instance JD.FromJSON Hash where
-  parseJSON = JD.withText "Hash" $ \t -> case PC.decodeBase64UrlUnpadded (T.encodeUtf8 t) of
+  parseJSON = JD.withText "Hash" $ \t -> case decodeBase64UrlUnpadded (T.encodeUtf8 t) of
     Left _ -> fail "cant decode"
     Right t' -> pure (Hash $ toShort t')
 
 instance JD.FromJSONKey Hash where
     fromJSONKey = JD.FromJSONKeyTextParser $ \t ->
-      case PC.decodeBase64UrlUnpadded (T.encodeUtf8 t) of
+      case decodeBase64UrlUnpadded (T.encodeUtf8 t) of
         Left _ -> fail "cant decode"
         Right t' -> pure (Hash $ toShort t')
 

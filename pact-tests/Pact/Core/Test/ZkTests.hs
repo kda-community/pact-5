@@ -10,8 +10,8 @@ import Data.Field(Field)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Pact.Core.Crypto.Pairing.Fields
-import Pact.Core.Crypto.Pairing
+import Pact.Crypto.Pairing.Fields
+import Pact.Crypto.Pairing
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.Hedgehog
@@ -330,4 +330,3 @@ verify inp p = let
     , (_alfa1 solVerifyingKey, _beta2 solVerifyingKey)
     , (vk_x', _gamma2 solVerifyingKey)
     , (_proofC p, _delta2 solVerifyingKey)]
-

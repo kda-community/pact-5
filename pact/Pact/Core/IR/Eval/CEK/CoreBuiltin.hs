@@ -48,14 +48,13 @@ import qualified GHC.Exts as Exts
 import qualified GHC.Integer.Logarithms as IntLog
 import qualified Pact.Time as PactTime
 import qualified Pact.Core.Trans.MPFR as MPFR
-#ifndef WITHOUT_CRYPTO
 import qualified Control.Lens as Lens
-#endif
 
 import Pact.Core.Builtin
 import Pact.Core.Literal
 import Pact.Core.Errors
 import Pact.Core.Hash
+import Pact.Core.Base64
 import Pact.Core.Names
 import Pact.Core.Guards
 import Pact.Core.PactValue
@@ -68,11 +67,9 @@ import Pact.Core.Gas
 import Pact.Core.Type
 import Pact.Core.ModRefs
 import Pact.Core.Info
-#ifndef WITHOUT_CRYPTO
-import Pact.Core.Crypto.Pairing
-import Pact.Core.Crypto.Hash.Poseidon
-import Pact.Core.Crypto.Hash.Keccak256
-#endif
+import Pact.Crypto.Pairing
+import Pact.Crypto.Hash.Poseidon
+import Pact.Crypto.Hash.Keccak256
 import Pact.Crypto.Hyperlane
 
 import Pact.Core.IR.Term
@@ -1776,7 +1773,6 @@ coreChainData info b cont handler _env = \case
 -- ZK defns
 -- -------------------------
 
-#ifndef WITHOUT_CRYPTO
 ensureOnCurve :: (Num p, Eq p) => i -> CurvePoint p -> p -> EvalM e b i ()
 ensureOnCurve info p bp = unless (isOnCurve p bp) $ throwExecutionError info PointNotOnCurve
 
@@ -1926,25 +1922,6 @@ coreHashKeccak256 info b cont handler _env = \case
           Right output -> pure output
     returnCEKValue cont handler (VString output)
   args -> argsError info b args
-
-#else
-
-zkPairingCheck :: NativeFunction e b i
-zkPairingCheck info _b _cont _handler _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-zkScalarMult :: NativeFunction e b i
-zkScalarMult info _b _cont _handler _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-zkPointAddition :: NativeFunction e b i
-zkPointAddition info _b _cont _handler _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-poseidonHash :: NativeFunction e b i
-poseidonHash info _b _cont _handler _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-coreHashKeccak256 :: NativeFunction e b i
-coreHashKeccak256 info _b _cont _handler _env _args = throwExecutionError info $ EvalError $ "crypto disabled"
-
-#endif
 
 -----------------------------------
 -- SPV

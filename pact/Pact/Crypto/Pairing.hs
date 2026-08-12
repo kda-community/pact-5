@@ -21,7 +21,7 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Pact.Core.Crypto.Pairing
+module Pact.Crypto.Pairing
   ( pairing
   , CurvePoint(..)
   , Fq(..)
@@ -79,7 +79,7 @@ import Control.DeepSeq (NFData)
 
 -- import Pact.Core.Literal
 -- import Pact.Core.PactValue
-import Pact.Core.Crypto.Pairing.Fields
+import Pact.Crypto.Pairing.Fields
 
 -- import qualified Pact.Core.Names as Name
 

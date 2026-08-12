@@ -42,7 +42,7 @@ import Data.Hashable (Hashable)
 import Data.Text (Text)
 import Data.Text.Encoding
 
-import Pact.Core.Hash
+import Pact.Core.Base64
 import qualified Pact.JSON.Encode as J
 
 resultToEither :: Result a -> Either String a
