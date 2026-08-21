@@ -12,7 +12,7 @@ on:
     inputs:
 
       cleanup:
-        description: 'Delete caches'
+        description: 'Delete cache : Build from scratch'
         type: boolean
         default: false
 
@@ -23,18 +23,18 @@ on:
           default: false
 
       release:
-          description: "Create a github release"
+          description: "Create a github release (Only Draft)"
           type: boolean
           required: true
           default: false
 
       commit_sha:
-        description: "Commit to build"
+        description: "Commit to build.. Empty to build the tip"
         type: string
         required: false
 
       version_suffix:
-        description: "Suffix for the vesion number (eg beta)"
+        description: "Optional Suffix for the vesion number (eg beta)"
         type: string
         required: false
         default: ""
@@ -51,18 +51,18 @@ jobs:
   cleanup:
     if: github.event_name == 'schedule' || inputs.cleanup
     runs-on: ubuntu-latest
-    
+
     permissions:
       actions: write
       contents: read
-    
+
     steps:
       - name: Delete caches
         run: gh cache delete --all --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
-  
-  
+
+
   build:
     needs: cleanup
     if: always()
@@ -86,6 +86,7 @@ jobs:
       run: |
         mkdir -p pact-tests/legacy-db-regression
         curl -L https://raw.githubusercontent.com/kda-community/test-fixtures/refs/heads/main/pact-v1-chain-9.sqlite.xz | unxz > pact-tests/legacy-db-regression/pact-v1-chain-9.sqlite
+
     # Haskell Setup
     - name: Set permissions for .ghcup (ubuntu)
       if: startsWith(matrix.os, 'ubuntu-')
@@ -124,14 +125,7 @@ jobs:
           /opt/local/lib
           /usr/local/opt/openssl/lib/
         EOF
-    - name: Extend cabal.project.local for GHC-9.0.2
-      if: "startsWith(matrix.ghc, '9')"
-      shell: bash
-      run: |
-        cat >> cabal.project.local <<EOF
-        package pact
-          ghc-options: -Wwarn -Wunused-packages
-        EOF
+
     - name: Add check for unused packages
       shell: bash
       run: |
@@ -139,6 +133,7 @@ jobs:
         package pact
           ghc-options: -Wunused-packages
         EOF
+
     - name: Print cabal.project.local
       shell: bash
       run: cat cabal.project.local
@@ -247,7 +242,7 @@ jobs:
 
     runs-on: "ubuntu-latest"
     needs: build
-    if: inputs.release == true
+    if: always() && inputs.release == true
 
     env:
       GHC_FOR_RELEASE: "9.10.3"
@@ -321,7 +316,7 @@ jobs:
   gasmodel:
     runs-on: "ubuntu-24.04"
     needs: build
-    if: inputs.gasmodel == true
+    if: always() && inputs.gasmodel == true
 
     env:
       GHC_FOR_BENCHMARKS: "9.10.3"
