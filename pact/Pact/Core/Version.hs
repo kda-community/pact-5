@@ -22,11 +22,11 @@ import Data.Version (Version(..))
 name :: String
 name = "pact_tng"
 version :: Version
-version = Version [5,4] []
+version = Version [5,4,1] []
 
 synopsis :: String
 synopsis = "Smart contract language library and REPL"
 copyright :: String
-copyright = "Copyright (C) 2022 Kadena"
+copyright = "Copyright (C) 2026 KDA Community"
 homepage :: String
-homepage = "https://github.com/kadena-io/pact-5"
+homepage = "https://github.com/kda-community/pact-5"
