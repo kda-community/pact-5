@@ -1041,9 +1041,10 @@ composeCap
   -> DirectEnv e b i
   -> FQCapToken
   -> EvalM e b i (EvalValue e b i)
-composeCap info env origToken =
+composeCap info env origToken@(CapToken capFqn _)  =
   isCapInStack' origToken >>= \case
-    False ->
+    False -> do
+      unlessExecutionFlagSet FlagDisablePact54Fix $ guardForModuleCall info (_fqModule capFqn) $ pure ()
       evalCap info env origToken PopCapComposed NormalCapEval (Constant (LBool True) info)
     True ->
       return (VBool True)

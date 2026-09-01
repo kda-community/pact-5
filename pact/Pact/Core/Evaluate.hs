@@ -158,18 +158,6 @@ data EvalResult = EvalResult
 
 type Info = LineInfo
 
-
-signerToTextQuantum:: Signer -> PublicKeyText
-signerToTextQuantum Signer{_siScheme = Nothing,..}       =  PublicKeyText _siPubKey -- missing scheme means ED25519
-signerToTextQuantum Signer{_siScheme = Just ED25519,..}  =  PublicKeyText _siPubKey
-signerToTextQuantum Signer{_siScheme = Just WebAuthn,..} =  PublicKeyText _siPubKey
-signerToTextQuantum Signer{_siScheme = Just SlhDsaSha128s,..} =  PublicKeyText $ "q" <> _siPubKey
-signerToTextQuantum Signer{_siScheme = Just SlhDsaSha192s,..} =  PublicKeyText $ "q" <> _siPubKey
-signerToTextQuantum Signer{_siScheme = Just SlhDsaSha256s,..} =  PublicKeyText $ "q" <> _siPubKey
-
-signerToTextLegacy:: Signer -> PublicKeyText
-signerToTextLegacy Signer{..} = PublicKeyText $ fromMaybe _siPubKey _siAddress
-
 setupEvalEnv
   :: PactDb CoreBuiltin a
   -> ExecutionMode -- <- we have this
@@ -202,10 +190,17 @@ setupEvalEnv pdb mode msgData mCont gasEnv np spv pd efs = do
   contToPactStep (Cont pid step rb _) = DefPactStep step rb pid Nothing
   mkMsgSigs ss = M.fromList $ map toPair ss
     where
-    toPair s@Signer{..} = (signerToText s, S.fromList $ _sigCapability <$> _siCapList)
+      toPair (Signer _scheme pubK addr capList) = (prefixKey signerpubKey ,S.fromList (_sigCapability <$> capList))
+        where
+          prefixKey | S.member FlagDisableSlhDsaSignatures efs = id
+                    | S.member scheme postQuantumSchemes = PublicKeyText . (<>) "q" . _pubKey
+                    | otherwise = id
 
-    signerToText | S.member FlagDisableSlhDsaSignatures efs = signerToTextLegacy
-                 | otherwise = signerToTextQuantum
+          signerpubKey | S.member FlagDisablePact54Fix efs = PublicKeyText $ fromMaybe pubK addr
+                       | otherwise = PublicKeyText pubK
+
+          scheme = fromMaybe ED25519 _scheme
+          postQuantumSchemes = S.fromList [SlhDsaSha128s, SlhDsaSha192s, SlhDsaSha256s]
 
   mkMsgVerifiers vs = M.fromListWith S.union $ map toPair vs
     where

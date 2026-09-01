@@ -841,9 +841,10 @@ composeCap
   -> CEKEnv e b i
   -> FQCapToken
   -> EvalM e b i (EvalResult e b i)
-composeCap info cont handler env origToken =
+composeCap info cont handler env origToken@(CapToken capFqn _) =
   isCapInStack' origToken >>= \case
-    False ->
+    False -> do
+      unlessExecutionFlagSet FlagDisablePact54Fix $ guardForModuleCall info (_fqModule capFqn) $ pure ()
       evalCap info cont handler env origToken PopCapComposed NormalCapEval (Constant (LBool True) info)
     True ->
       returnCEKValue cont handler (VBool True)
