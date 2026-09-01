@@ -317,9 +317,6 @@ library pact-repl
   if (flag(with-native-tracing))
     cpp-options: -DWITH_NATIVE_TRACING
 
-  if (flag(with-native-tracing) || flag(with-funcall-tracing))
-    cpp-options: -DWITH_TRACING
-
   exposed-modules:
     Pact.Core.Repl
     Pact.Core.Repl.Utils
