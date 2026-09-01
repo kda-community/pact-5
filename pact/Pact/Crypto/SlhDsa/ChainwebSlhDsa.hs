@@ -60,7 +60,7 @@ oidFromhash txHash
 verifySig :: PPKScheme -> T.Text -> T.Text -> Hash -> Either String ()
 verifySig pactScheme pkey sig txHash = do
     decodedPkey <- SB.toShort <$> (B16.decode $ TE.encodeUtf8 pkey)
-    decodedSig  <- B64.decodeBase64UrlUnpadded $ TE.encodeUtf8 sig
+    decodedSig  <- B64.decodeBase64UrlUnpaddedStrict $ TE.encodeUtf8 sig
     prm <- paramaterFromScheme pactScheme
     oid <- oidFromhash txHash
     verifySignaturePreHashedWithContext prm chainwebContext oid decodedPkey decodedSig $ unHash txHash
