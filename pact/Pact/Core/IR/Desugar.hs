@@ -19,7 +19,9 @@
 {-# LANGUAGE CPP #-}
 
 module Pact.Core.IR.Desugar
- ( runDesugarTerm
+ ( SpecialForm(..)
+ , specialFormToText
+ , runDesugarTerm
  , runDesugarTopLevel
  , runDesugarReplTopLevel
  , DesugarOutput(..)
@@ -282,6 +284,25 @@ toSpecialForm = \case
   "create-user-guard" -> Just SFCreateUserGuard
   "error" -> Just SFError
   "pure" -> Just SFPure
+  _ -> Nothing
+
+specialFormToText :: SpecialForm -> Maybe Text
+specialFormToText = \case
+  SFAnd -> Just "and"
+  SFOr -> Just "or"
+  SFIf -> Just "if"
+  SFEnforce -> Just "enforce"
+  SFWithCapability -> Just "with-capability"
+  -- Intentionnaly we hide suspend.
+  --SFSuspend -> Just "suspend"
+  SFDo -> Just "do"
+  SFEnforceOne -> Just "enforce-one"
+  SFTry -> Just "try"
+  SFMap -> Just "map"
+  SFCond -> Just "cond"
+  SFCreateUserGuard -> Just "create-user-guard"
+  SFPure -> Just "pure"
+  SFError -> Just "error"
   _ -> Nothing
 
 forkedToSpecialForm :: (Monad (t (EvalM e b i)), MonadTrans t) => Text -> t (EvalM e b i) (Maybe SpecialForm)

@@ -76,6 +76,7 @@ import Pact.Core.Environment
 import Pact.Core.Builtin
 import Pact.Core.PactValue
 import Pact.Core.Debug
+import Pact.Core.IR.Desugar
 import qualified Pact.Core.IR.Term as Term
 
 import System.Console.Haskeline.Completion
@@ -196,6 +197,11 @@ emptyTxState = do
     let preservedFQReplDefuns = M.filterWithKey (\fqn _ -> _fqModule fqn == replModuleName) (_loAllLoaded lo)
     pure $ set loToplevel preservedTLReplDefuns $ set loAllLoaded preservedFQReplDefuns $ def
 
+
+specialFormNames:: [Text]
+specialFormNames = mapMaybe specialFormToText [minBound .. maxBound]
+
+
 replCompletion
   :: [Text]
   -- ^ natives
@@ -211,8 +217,6 @@ replCompletion natives =
         [tlns, moduleNames, prefixedNames, natives, specialFormNames]
     pure $ simpleCompletion <$> Set.toList (Set.filter (str `isPrefixOf`) allNames)
   where
-  specialFormNames =
-    ["and", "or", "if",  "enforce", "enforce-one", "with-capability", "try", "create-user-guard"]
   defNames = \case
     ModuleData md _ ->
       Term.defName <$> Term._mDefs md
