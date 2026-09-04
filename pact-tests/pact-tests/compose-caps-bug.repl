@@ -1,0 +1,109 @@
+
+(begin-tx)
+(module vulnerable GOV
+  (defcap GOV ()
+    true)
+
+  (defcap MY-CAP-IN-MODULE-VULNERABLE ()
+    true)
+
+  (defun test-cap:string ()
+    (require-capability (MY-CAP-IN-MODULE-VULNERABLE))
+    "Help me God")
+)
+
+; Another flavor of a vulnerable but with governance locked
+; Behaviour is supposed to be the same in all cases
+(module vulnerable-no-gov GOV
+  (defcap GOV ()
+    (enforce false "No Governance"))
+
+  (defcap MY-CAP-IN-MODULE-VULNERABLE ()
+    true)
+
+  (defun test-cap:string ()
+    (require-capability (MY-CAP-IN-MODULE-VULNERABLE))
+    "Help me God")
+)
+
+
+(commit-tx)
+
+
+
+(begin-tx)
+(module attacker GOV
+  (defcap GOV ()
+    true)
+
+  (defcap ATTACKER-CAP ()
+    (compose-capability (vulnerable.MY-CAP-IN-MODULE-VULNERABLE)))
+
+  (defcap ATTACKER-CAP-NO-GOV ()
+    (compose-capability (vulnerable-no-gov.MY-CAP-IN-MODULE-VULNERABLE)))
+
+  ; Attack function of the unlocked module
+  (defun test-cap:string ()
+    (with-capability (ATTACKER-CAP)
+      (vulnerable.test-cap)))
+
+  ; Attack function of the locked module
+  (defun test-cap-no-gov:string ()
+    (with-capability (ATTACKER-CAP-NO-GOV)
+      (vulnerable-no-gov.test-cap)))
+)
+(commit-tx)
+
+(begin-tx)
+; Old behaviour
+(env-exec-config ['DisablePact54Fix])
+(expect "Cap is vulnerable" "Help me God" (attacker.test-cap))
+(expect "Cap is vulnerable" "Help me God" (attacker.test-cap-no-gov))
+(commit-tx)
+
+(begin-tx)
+; New behaviour
+(env-exec-config [])
+(expect-failure "Cap is not vulnerable" (attacker.test-cap))
+(expect-failure "Cap is not vulnerable" (attacker.test-cap-no-gov))
+(commit-tx)
+
+
+
+(begin-tx)
+; New behaviour => Test with Attacker Governance in scope (just in case)
+; Deploying module automatically gives you the governance.
+
+(env-exec-config [])
+(module new-attacker GOV
+  (defcap GOV ()
+    true)
+
+  (defcap ATTACKER-CAP ()
+    (compose-capability (vulnerable.MY-CAP-IN-MODULE-VULNERABLE)))
+
+  (defun test-cap:string ()
+    (with-capability (ATTACKER-CAP)
+      (vulnerable.test-cap)))
+)
+
+(expect-failure "Cap is not vulnerable" (attacker.test-cap))
+(commit-tx)
+
+
+; A test case that is expected to always work
+; When we have the vulnerable module governance in scope; X-composing caps is allowed.
+(begin-tx)
+
+; Old behaviour
+(env-exec-config ['DisablePact54Fix])
+
+(acquire-module-admin vulnerable) ;---> Acquire the governance of vulnerable
+
+(expect "X-composing is allowed here" "Help me God" (attacker.test-cap))
+
+(env-exec-config [])
+; New behaviour => Same
+(expect "X-composing is allowed here" "Help me God" (attacker.test-cap))
+
+(commit-tx)
