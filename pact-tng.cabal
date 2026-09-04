@@ -41,6 +41,11 @@ flag with-native-tracing
   manual: True
   default: True
 
+flag with-pandoc-repl-rendering
+  description: Enable Markdown rendering within the REPL with Pandoc
+  manual: True
+  default: True
+
 library unsafe
   visibility: public
   hs-source-dirs: unsafe/src
@@ -317,6 +322,14 @@ library pact-repl
   if (flag(with-native-tracing))
     cpp-options: -DWITH_NATIVE_TRACING
 
+  if (flag(with-native-tracing) || flag(with-funcall-tracing))
+    cpp-options: -DWITH_TRACING
+
+  if (flag(with-pandoc-repl-rendering))
+    cpp-options: -DWITH_PANDOC_RENDERING
+    build-depends:
+      pandoc
+
   exposed-modules:
     Pact.Core.Repl
     Pact.Core.Repl.Utils
@@ -341,7 +354,6 @@ library pact-repl
     , pact-tng
     , pact-tng:pact-crypto
     , filepath
-    , pandoc
 
 library pact-lsp
   import: pact-common

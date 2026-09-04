@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP #-}
 
 module Pact.Core.Repl.BuiltinDocs
   ( topLevelHasDocs
@@ -7,14 +8,17 @@ module Pact.Core.Repl.BuiltinDocs
   ) where
 
 import Data.Text (Text)
-import Control.Monad
+
 import Pact.Core.Syntax.ParseTree
 import Pact.Core.Names
 
 import qualified Data.Map.Strict as M
 import Pact.Core.Repl.BuiltinDocs.Internal
 
+#ifdef WITH_PANDOC_RENDERING
 import Text.Pandoc
+import Control.Monad
+#endif
 
 -- Only used for the REPL output.
 topLevelHasDocs :: TopLevel i -> Maybe Text
@@ -26,6 +30,8 @@ topLevelHasDocs _ = Nothing
 builtinDocs :: M.Map Text MarkdownDoc
 builtinDocs = $$mkBuiltinDocs
 
+
+#ifdef WITH_PANDOC_RENDERING
 renderBuiltinDoc :: Text -> IO (Either PandocError Text)
 renderBuiltinDoc = runIO . (readMarkdown readerOpts >=> writeANSI writerOpts)
 
@@ -38,3 +44,10 @@ writerOpts :: WriterOptions
 writerOpts = def
   { writerExtensions = pandocExtensions
   }
+
+#else
+
+renderBuiltinDoc :: Text -> IO (Either () Text)
+renderBuiltinDoc = pure . pure
+
+#endif
