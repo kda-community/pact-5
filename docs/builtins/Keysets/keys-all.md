@@ -10,6 +10,8 @@ To check whether all of the keys defined in a keyset are matched, use the follow
 (keys-all count matched)
 ```
 
+**Note:** `keys-all` is intendeed to be used in keyset definitions, and not used directly in Pact code.
+
 ### Arguments
 
 Use the following arguments to specify the count of keys in the keyset and the number of matched keys using the `keys-all` Pact function.
