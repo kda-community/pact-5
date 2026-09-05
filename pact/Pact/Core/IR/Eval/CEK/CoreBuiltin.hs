@@ -979,7 +979,8 @@ coreReadKeyset info b cont handler _env = \case
     readKeyset' info ksn >>= \case
       Just ks -> do
         shouldEnforce <- isExecutionFlagSet FlagEnforceKeyFormats
-        if shouldEnforce && isLeft (enforceKeyFormats (const ()) ks)
+        slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+        if shouldEnforce && isLeft (enforceKeyFormats (const ()) slhDsaDisabled ks)
            then
             throwExecutionError info (InvalidKeysetFormat ks)
            else returnCEKValue cont handler (VGuard (GKeyset ks))
@@ -1625,7 +1626,8 @@ coreCompose info b cont handler env = \case
 coreCreatePrincipal :: (IsBuiltin b) => NativeFunction e b i
 coreCreatePrincipal info b cont handler _env = \case
   [VGuard g] -> do
-    pr <- createPrincipalForGuard info g
+    slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+    pr <- createPrincipalForGuard info slhDsaDisabled g
     returnCEKValue cont handler $ VString $ Pr.mkPrincipalIdent pr
   args -> argsError info b args
 
@@ -1633,14 +1635,16 @@ coreIsPrincipal :: (IsBuiltin b) => NativeFunction e b i
 coreIsPrincipal info b cont handler _env = \case
   [VString p] -> do
     chargeGasArgs info $ GStrOp $ StrOpParse $ T.length p
-    returnCEKValue cont handler $ VBool $ isRight $ parseOnly Pr.principalParser p
+    slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+    returnCEKValue cont handler $ VBool $ isRight $ parseOnly (Pr.principalParser slhDsaDisabled) p
   args -> argsError info b args
 
 coreTypeOfPrincipal :: (IsBuiltin b) => NativeFunction e b i
 coreTypeOfPrincipal info b cont handler _env = \case
   [VString p] -> do
     chargeGasArgs info $ GStrOp $ StrOpParse $ T.length p
-    let prty = case parseOnly Pr.principalParser p of
+    slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+    let prty = case parseOnly (Pr.principalParser slhDsaDisabled) p of
           Left _ -> ""
           Right pr -> Pr.showPrincipalType pr
     returnCEKValue cont handler $ VString prty
@@ -1649,7 +1653,8 @@ coreTypeOfPrincipal info b cont handler _env = \case
 coreValidatePrincipal :: (IsBuiltin b) => NativeFunction e b i
 coreValidatePrincipal info b cont handler _env = \case
   [VGuard g, VString s] -> do
-    pr' <- createPrincipalForGuard info g
+    slhDsaDisabled <- isExecutionFlagSet FlagDisableSlhDsaSignatures
+    pr' <- createPrincipalForGuard info slhDsaDisabled g
     chargeGasArgs info $ GComparison $ TextComparison s
     returnCEKValue cont handler $ VBool $ Pr.mkPrincipalIdent pr' == s
   args -> argsError info b args

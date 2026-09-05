@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Pact.Core.Evaluate
   ( MsgData(..)
@@ -54,6 +55,7 @@ import Pact.Core.PactValue
 import Pact.Core.Gas
 import Pact.Core.Names
 import Pact.Core.Guards
+import Pact.Core.Scheme
 import Pact.Core.SPV
 import Pact.Core.Namespace
 import Pact.Core.IR.Desugar
@@ -156,8 +158,6 @@ data EvalResult = EvalResult
 
 type Info = LineInfo
 
-
-
 setupEvalEnv
   :: PactDb CoreBuiltin a
   -> ExecutionMode -- <- we have this
@@ -190,10 +190,17 @@ setupEvalEnv pdb mode msgData mCont gasEnv np spv pd efs = do
   contToPactStep (Cont pid step rb _) = DefPactStep step rb pid Nothing
   mkMsgSigs ss = M.fromList $ map toPair ss
     where
-      toPair (Signer _scheme pubK addr capList) = (signerpubKey ,S.fromList (_sigCapability <$> capList))
+      toPair (Signer _scheme pubK addr capList) = (prefixKey signerpubKey ,S.fromList (_sigCapability <$> capList))
         where
+          prefixKey | S.member FlagDisableSlhDsaSignatures efs = id
+                    | S.member scheme postQuantumSchemes = PublicKeyText . (<>) "q" . _pubKey
+                    | otherwise = id
+
           signerpubKey | S.member FlagDisablePact54Fix efs = PublicKeyText $ fromMaybe pubK addr
                        | otherwise = PublicKeyText pubK
+
+          scheme = fromMaybe ED25519 _scheme
+          postQuantumSchemes = S.fromList [SlhDsaSha128s, SlhDsaSha192s, SlhDsaSha256s]
 
   mkMsgVerifiers vs = M.fromListWith S.union $ map toPair vs
     where

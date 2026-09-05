@@ -26,8 +26,8 @@ module Pact.Core.Guards
 -- , CapGovRef(..)
 
 -- * Key Format Validation
-, allKeyFormats
 , ed25519HexFormat
+, slhKeyFormat
 , webAuthnFormat
 , webAuthnPrefix
 , isValidKeyFormat
@@ -71,7 +71,9 @@ instance Pretty PublicKeyText where
   pretty (PublicKeyText t) = pretty t
 
 renderPublicKeyText :: PublicKeyText -> Text
-renderPublicKeyText = _pubKey
+renderPublicKeyText pkt
+    | "q" `T.isPrefixOf` _pubKey pkt  = T.tail $ _pubKey pkt
+    | otherwise = _pubKey pkt
 
 data KeySetName = KeySetName
   { _keysetName :: Text
@@ -157,6 +159,11 @@ instance Pretty KeySet where
 ed25519HexFormat :: PublicKeyText -> Bool
 ed25519HexFormat (PublicKeyText k) = T.length k == 64 && T.all isHexDigitLower k
 
+slhKeyFormat :: PublicKeyText -> Bool
+slhKeyFormat (PublicKeyText k) = case T.uncons k of
+    Nothing -> False
+    Just (_head, _tail) -> _head == 'q' && T.all isHexDigitLower _tail && (T.length _tail `elem` [64, 96, 128])
+
 webAuthnFormat :: PublicKeyText -> Bool
 webAuthnFormat = isJust . parseWebAuthnPublicKeyText
 
@@ -200,16 +207,18 @@ isHexDigitLower c =
 webAuthnPrefix :: Text
 webAuthnPrefix = "WEBAUTHN-"
 
-allKeyFormats :: [PublicKeyText -> Bool]
-allKeyFormats = [ed25519HexFormat, webAuthnFormat]
+isValidKeyFormat :: Bool -> PublicKeyText -> Bool
+isValidKeyFormat disableSlh k = any ($ k) formats
+  where formats
+            | disableSlh = [ed25519HexFormat, webAuthnFormat]
+            | otherwise =  [ed25519HexFormat, slhKeyFormat, webAuthnFormat]
 
-isValidKeyFormat :: PublicKeyText -> Bool
-isValidKeyFormat k = any ($ k) allKeyFormats
 
-enforceKeyFormats :: (PublicKeyText -> err) -> KeySet -> Either err ()
-enforceKeyFormats onErr (KeySet keys _pred) = traverse_ validateKey keys
+
+enforceKeyFormats :: (PublicKeyText -> err) -> Bool -> KeySet -> Either err ()
+enforceKeyFormats onErr disableSlh (KeySet keys _pred) = traverse_ validateKey keys
   where
-  validateKey k = if isValidKeyFormat k then pure () else Left $ onErr k
+    validateKey k = if isValidKeyFormat disableSlh k then pure () else Left $ onErr k
 
 
 data UserGuard name term

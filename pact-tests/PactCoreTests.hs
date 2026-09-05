@@ -28,6 +28,7 @@ import qualified Pact.Core.Test.ClientTests as ClientTests
 import qualified Pact.Core.Test.Keccak256Tests as KeccakTests
 import qualified Pact.Core.Test.TransitiveDependencyTests as TransitiveDependencyTests
 import qualified Pact.Core.Test.TypecheckerTests as TypecheckerTests
+import qualified Pact.Core.Test.SlhSignaturesTests as SlhSignaturesTests
 
 main :: IO ()
 main = do
@@ -63,6 +64,6 @@ main = do
     , ClientTests.tests
     , KeccakTests.tests
     , TransitiveDependencyTests.tests
+    , SlhSignaturesTests.tests'
     , tcTests
     ]
-

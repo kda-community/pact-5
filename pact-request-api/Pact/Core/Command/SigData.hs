@@ -84,7 +84,7 @@ instance FromJSON a => FromJSON (SigData a) where
     pure $ SigData h s c
     where
       f v = flip (withObject "SigData Pairs") v $ \_ ->
-        fmap (bimap PublicKeyHex (fmap ED25519Sig)) . LHM.sortByKey . HM.toList <$> parseJSON v
+        fmap (bimap PublicKeyHex (fmap PlainSig)) . LHM.sortByKey . HM.toList <$> parseJSON v
 
 instance J.Encode a => J.Encode (SigData a) where
   build o = J.object
@@ -96,7 +96,7 @@ instance J.Encode a => J.Encode (SigData a) where
     , "cmd" J..?= _sigDataCmd o
     ]
     where
-    extractEd25519Sig (ED25519Sig s) = s
+    extractEd25519Sig (PlainSig s) = s
     extractEd25519Sig _ = error "SigData cannot contain non-ED25519 signature"
   {-# INLINE build #-}
 
