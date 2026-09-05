@@ -78,7 +78,7 @@ data Shadows i
   = Shadows ShadowCtx Text i
   deriving (Eq, Show)
 
-instance Pretty i => Pretty (Shadows i) where
+instance Pretty (Shadows i) where
   pretty (Shadows ctx shadowedVar _) =
     "Variable" <+> pretty shadowedVar <+> "shadows native of the same name" <+> pretty ctx
 
