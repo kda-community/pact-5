@@ -86,7 +86,7 @@ import Pact.Core.SatWord
 newtype MilliGas
   = MilliGas SatWord
   deriving Show
-  deriving newtype (Eq, Ord, NFData, Prim, Bounded, Enum)
+  deriving newtype (Eq, Ord, NFData, Prim, Bounded, Enum, Num)
   deriving (Semigroup, Monoid) via (Sum SatWord)
 
 instance Pretty MilliGas where
@@ -95,7 +95,7 @@ instance Pretty MilliGas where
 newtype MilliGasLimit
   = MilliGasLimit MilliGas
   deriving (Bounded, Eq, Ord, Show)
-  deriving newtype NFData
+  deriving newtype (NFData, Num)
 
 -- | Gas in pact-core, represented as an unsigned
 -- integer, units will go in terms of 1e3 = 2ns
@@ -103,7 +103,7 @@ newtype Gas
   = Gas { _gas :: SatWord }
   deriving (Eq, Ord, Show)
   deriving (Semigroup, Monoid) via (Sum SatWord)
-  deriving (Enum) via SatWord
+  deriving (Enum, Bounded, Num) via SatWord
   deriving newtype NFData
 
 makePrisms ''Gas
@@ -114,7 +114,7 @@ instance Pretty Gas where
 newtype GasLimit =
   GasLimit Gas
   deriving (Eq, Show, Ord)
-  deriving newtype NFData
+  deriving newtype (NFData, Num)
 
 instance Pretty GasLimit where
   pretty (GasLimit g) = pretty g
@@ -124,7 +124,7 @@ makePrisms ''GasLimit
 newtype GasPrice
   = GasPrice Decimal
   deriving (Eq, Show, Ord)
-  deriving newtype NFData
+  deriving newtype (NFData, Fractional, Num)
 
 makePrisms ''GasPrice
 
