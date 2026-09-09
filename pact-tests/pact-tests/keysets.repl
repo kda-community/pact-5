@@ -495,7 +495,6 @@
 (commit-tx)
 
 ;;
-;; ========= test keyset magic caps ===========
 ;;
 
 (begin-tx "setup magic")

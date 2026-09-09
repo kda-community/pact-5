@@ -2,14 +2,12 @@
 ;; errors have to be handled via "bad" scripts in tests/pact/bad
 
 ;; semicolon in expr
-;; ===========
 (+ 1 2
   ;
   )
 
 ;; in-module productions
 ;; note this is parsed, compiled, and loaded, so not just parsing
-;; ===========
 (interface quux (defun f ()))
 
 (define-namespace 'bar (sig-keyset) (sig-keyset))

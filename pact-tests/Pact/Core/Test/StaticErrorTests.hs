@@ -1254,7 +1254,6 @@ executionTests =
         )
     |])
   , ("bad-gov-cap-acquire", isUserRecoverableError _KeysetPredicateFailure, [text|
-    ;; ======== test governance cap acquire ========
 
     (begin-tx)
     (env-data { 'k: ['ns], 'gov: ['gov] })

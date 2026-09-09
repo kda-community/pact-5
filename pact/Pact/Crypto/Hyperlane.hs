@@ -24,8 +24,6 @@ module Pact.Crypto.Hyperlane
   , eof
   ) where
 
-import Data.ByteArray as BA
-import qualified Crypto.Hash as Crypton
 import Control.Lens ((^?), at, _Just, Prism')
 import Control.Monad (unless)
 import Control.Monad.Except (throwError)
@@ -37,6 +35,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as BB
 import Data.ByteString.Lazy qualified as BL
+import Data.ByteString.Short qualified as BSS
 import Data.Decimal (Decimal)
 import Data.Map (Map)
 import Data.Ratio ((%))
@@ -46,8 +45,9 @@ import Data.Text.Encoding qualified as Text
 import Data.Text.Read qualified as Text
 import Data.WideWord.Word256 (Word256(..))
 import Data.Word (Word8, Word16, Word32)
+import Ethereum.Misc (keccak256, _getKeccak256Hash, _getBytesN)
 import Pact.JSON.Decode qualified as J
-import Pact.Core.StableEncoding
+import Pact.Core.StableEncoding 
 
 import Pact.Core.Errors
 import Pact.Core.PactValue
@@ -131,10 +131,7 @@ getHyperlaneMessageId =
   . packHyperlaneMessage
 
 keccak256Hash :: ByteString -> ByteString
-keccak256Hash = BA.convert . doHash
-  where
-    doHash :: BS.ByteString -> Crypton.Digest Crypton.Keccak_256
-    doHash = Crypton.hash
+keccak256Hash = BSS.fromShort . _getBytesN . _getKeccak256Hash . keccak256
 
 decodeBase64 :: Field -> Text -> Either HyperlaneError ByteString
 decodeBase64 key s =

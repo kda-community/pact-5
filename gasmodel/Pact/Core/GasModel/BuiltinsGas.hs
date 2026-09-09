@@ -772,14 +772,6 @@ benchPoseidon pdb =
   , let args = T.unwords $ T.pack . show <$> [1..cnt]
   ]
 
-benchKeccak256 :: BuiltinBenches
-benchKeccak256 pdb =
-  [ runNativeBenchmarkPrepared [("l", lst)] pdb ( lstLenTitle <> " / 4*" <> elemLenTitle  ) "(hash-keccak256 l)"
-  | (elemLenTitle, str) <- take 4 $ enumExpString "YWEK" 25 10
-  , (lstLenTitle, lstLen) <- take 4 $ enumExpNum 1 10
-  , let lst = PList $ V.fromList $ replicate (fromIntegral lstLen) str
-  ]
-
 benchesForBuiltin :: CoreBuiltin -> BuiltinBenches
 benchesForBuiltin bn = case bn of
   CoreAdd -> benchArithBinOp "+" <> benchAddNonArithOverloads
@@ -933,7 +925,8 @@ benchesForBuiltin bn = case bn of
   -- Note: Hash-poseidon is an alias to the poseidon-hash-hackachain
   -- function, so we don't need benches for it
   CoreHashPoseidon -> omittedDeliberately
-  CoreHashKeccak256 -> benchKeccak256
+  -- TODO: port keccak benchmarks
+  CoreHashKeccak256 -> omittedDeliberately
   where
   omittedDeliberately = const []
   alreadyCovered = const []

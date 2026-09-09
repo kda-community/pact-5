@@ -20,6 +20,7 @@ import Pact.Core.Command.Client
 import Pact.Core.Command.Crypto
 import Pact.Core.Command.Server
 import Pact.Core.Command.Util
+import Pact.Crypto.SlhDsa.ChainwebSlhDsa (genKeypair)
 import Pact.Core.Repl.Compile
 import Pact.Core.Environment
 import Pact.Core.Pretty
@@ -53,6 +54,7 @@ data ReplOpts
   | OServer FilePath
   -- Crypto
   | OGenKey
+  | OGenKeyPQ { _oPQScheme :: String }
   | OCheckNativeShadowing FilePath
   deriving (Eq, Show)
 
@@ -64,6 +66,8 @@ replOpts = O.optional $
   <|> apiReqFlag
   <|> unsignedReqFlag
   <|> O.flag' OGenKey (O.short 'g' <> O.long "genkey" <> O.help "Generate ED25519 keypair")
+  <|> (OGenKeyPQ <$> O.strOption (O.long "genkey-pq" <> O.metavar "SCHEME"
+        <> O.help "Generate SLH-DSA keypair: SLH-DSA-SHA2-128s | SLH-DSA-SHA2-192s | SLH-DSA-SHA2-256s"))
   <|> loadFlag
   <|> OServer <$> O.strOption (O.metavar "CONFIG" <> O.short 's' <> O.long "server" <> O.help "Run Pact-Server")
   <|> checkNativeShadowingFlag
@@ -125,6 +129,7 @@ main = O.execParser argParser >>= \case
     OApiReq cf l -> apiReq cf l
     OSignCmd kfs -> BS8.putStrLn =<< signCmd kfs =<< fmap (T.encodeUtf8 . T.strip) T.getContents
     OGenKey -> genKeys
+    OGenKeyPQ scheme -> genKeysPQ scheme
     OLoad (OReplLoadFile findScript dbg coverage fp)
       | isPactFile fp -> do
         script <- if findScript then locatePactReplScript fp else return Nothing
@@ -156,6 +161,25 @@ genKeys = do
   kp <- genKeyPair
   putStrLn $ "public: " ++ T.unpack (toB16Text $ getPublic kp)
   putStrLn $ "secret: " ++ T.unpack (toB16Text $ getPrivate kp)
+
+genKeysPQ :: String -> IO ()
+genKeysPQ schemeStr = do
+  scheme <- case schemeStr of
+    "SLH-DSA-SHA2-128s" -> return SlhDsaSha128s
+    "SLH-DSA-SHA2-192s" -> return SlhDsaSha192s
+    "SLH-DSA-SHA2-256s" -> return SlhDsaSha256s
+    _ -> do
+      hPutStrLn stderr $ "Unknown scheme: " ++ schemeStr
+      hPutStrLn stderr   "Valid schemes: SLH-DSA-SHA2-128s | SLH-DSA-SHA2-192s | SLH-DSA-SHA2-256s"
+      exitFailure
+  result <- genKeypair scheme
+  case result of
+    Left err -> hPutStrLn stderr ("keygen failed: " ++ err) >> exitFailure
+    Right (sk, pk) -> do
+      putStrLn $ "scheme: " ++ schemeStr
+      putStrLn $ "public: " ++ T.unpack pk
+      putStrLn $ "secret: " ++ T.unpack sk
+      putStrLn $ "account: q:" ++ T.unpack pk
 
 -- | Run heuristics to find a repl script. First is the file name with ".repl" extension;
 -- if not, it will see if there is a single ".repl" file in the directory, and if so

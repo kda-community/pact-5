@@ -1,22 +1,4 @@
-5.4.1
------
-
-### Bug Fixes
-
-- Fix compose-capability bug
-
-- Deprecate and disable the addr field of signers
-
-### Features
-
-- Show the received values with (expect-that) in case of failure
-
-### Misc
-
-- Replace some deprecated dependencies
-
-
-5.4
+5.3
 ---
 ### Misc
 - Add check for G2 membership in pairing-check, and test (#386)

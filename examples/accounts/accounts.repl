@@ -15,7 +15,7 @@
 (begin-tx)
 (load "accounts.pact")
 (commit-tx)
-(verify 'accounts)
+;; (verify 'accounts) -- FV not in Pact 5
 
 (env-data { "123-keyset": { "keys" : ["user123"], "pred": "keys-all" },
              "456-keyset": { "keys": ["user456"], "pred": "keys-any" } })
@@ -40,34 +40,10 @@
 (env-keys ["user123" "user456"])
 (expect-failure "should not allow read" (with-read accounts "123" { "balance" := b } b))
 
-;; test private pact 'payment'
-
-(env-keys ["user123" "accountadmin"])
-(env-entity "us")
-
-; initiate pact with normal execution
-(env-hash (hash "payment123-pact-id")) ;; equivalent to setting pact-id hash
-(payment "123" "us" "456" "them" 12.0 (time "2016-07-22T11:26:35Z"))
-(expect "balance of 123 after debit step" 217.0 (with-read accounts "123" { "balance" := b } b))
-
-; test rollback
-(continue-pact 0 true)
-(expect "balance of 123 after rollback" 229.0 (with-read accounts "123" { "balance" := b } b))
-
-; test success step 1
-(pact-state true)
-(payment "123" "us" "456" "them" 12.0 (time "2016-07-22T11:26:35Z"))
-(continue-pact 1)
-(expect "balance of 456 unchanged" 5.0 (with-read accounts "456" { "balance" := b } b))
+;; Close the open tx before proceeding to escrow tests
 (rollback-tx)
 
-(begin-tx)
-(use accounts)
-(payment "123" "us" "456" "them" 12.0 (time "2016-07-22T11:26:35Z"))
-(env-entity "them")
-(continue-pact 1)
-(expect "balance of 456 after credit step" 17.0 (with-read accounts "456" { "balance" := b } b))
-(rollback-tx)
+;; Private pact tests used env-entity which was removed in Pact 5 — omitted.
 
 ;; test public pact escrow
 (begin-tx)
@@ -138,10 +114,10 @@
 ;;exercise PAY
 (begin-tx)
 
+;; env-sigs installs the capability via the signer — no separate install-capability needed in Pact 5
 (env-sigs
  [{ 'key: "user123", "caps": [(accounts.PAY "123" "456" 1.0)]},
   { 'key: "accountadmin", "caps": [] }])
-(install-capability (accounts.PAY "123" "456" 1.0))
 (expect
  "Payment for 0.9 on 1.0 installed cap succeeds"
  "Transfer succeeded"

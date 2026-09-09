@@ -1,0 +1,6 @@
+# pv-pointer v1
+original: pact-v1-chain-9.sqlite
+size: 198547456
+sha256: e117d1ea7009b1357e2333e530d4b4de40b9fe170e6090e600536c51b1fe3f02
+storage:
+  local: /home/notbob/.config/projectvault/backups/pact5-pq/pact-v1-chain-9.sqlite

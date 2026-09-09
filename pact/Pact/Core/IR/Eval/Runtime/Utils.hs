@@ -610,12 +610,14 @@ renderPactValue info pv = do
 
 createPrincipalForGuard
   :: i
+  -> Bool
   -> Guard QualifiedName PactValue
   -> EvalM e b i Pr.Principal
-createPrincipalForGuard info = \case
+createPrincipalForGuard info slhDsaDisabled = \case
   GKeyset (KeySet ks pf) -> case (toList ks, pf) of
     ([k], KeysAll)
       | ed25519HexFormat k -> Pr.K k <$ chargeGas 1_000
+      | not slhDsaDisabled && slhKeyFormat k -> Pr.Q k <$ chargeGas 1_000
     (l, _) -> do
       h <- mkHash $ map (T.encodeUtf8 . _pubKey) l
       case pf of
@@ -623,7 +625,10 @@ createPrincipalForGuard info = \case
           let totalLength = T.length n + T.length mn + maybe 0 (T.length . _namespaceName) mns
           chargeGasArgs info $ GConcat $ TextConcat $ GasTextLength totalLength
         _ -> pure ()
-      pure $ Pr.W (hashToText h) (predicateToText pf)
+
+      pure $ prType (hashToText h) (predicateToText pf)
+          where prType | not slhDsaDisabled && all slhKeyFormat l = Pr.X
+                       | otherwise = Pr.W
   GKeySetRef ksn ->
     Pr.R ksn <$ chargeGas 1_000
   GModuleGuard (ModuleGuard mn n) ->
@@ -644,7 +649,7 @@ createPrincipalForGuard info = \case
   GDefPactGuard (DefPactGuard dpid name) -> Pr.P dpid name <$ chargeGas 1_000
   where
     chargeGas mg = chargeGasArgs info (GAConstant (MilliGas mg))
-    mkHash bss = pactHash (mconcat bss) <$ chargeGas 1_000
+    mkHash bss = pactHash (mconcat bss) <$ chargeGas 1_000 -- Note: Shouldn't we apply _gcMHashBytePenalty here ?
 
 createEnumerateList
   :: i

@@ -1,0 +1,7 @@
+is_topmost_config = true
+
+[inference]
+model        = "claude-sonnet-4-6-1m"
+small_model  = "claude-sonnet-4-6"
+micro_model  = "claude-haiku-4-5"
+extra_context = "/home/notbob/.cosine/AGENTS.md"

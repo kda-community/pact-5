@@ -1,0 +1,82 @@
+; First Check without enforcing key-formats
+
+(env-exec-config [])
+(env-data {'my-keyset:["Unkwnon Format"]})
+
+(read-keyset 'my-keyset)
+
+; Then enable enforcing formats
+
+(env-exec-config ["EnforceKeyFormats"])
+(env-data {'my-keyset:["Unkwnon Format"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+; An ED25519 format should pass
+(env-data {'my-keyset:["57955427137ba0de06b131c5f5b194dee63f83e3412881c25722723b54fde1b9"]})
+(read-keyset 'my-keyset)
+
+; Test with a multi-sig
+(env-data {'my-keyset:["57955427137ba0de06b131c5f5b194dee63f83e3412881c25722723b54fde1b9","0233d792952b80fd2c1bf99c4310e09f568386ea441c9efaada3158859471fe6" ]})
+(read-keyset 'my-keyset)
+
+; Not a mixed keyset (Bad key  + Good key)
+(env-data {'my-keyset:["Unkwnon Format", "0233d792952b80fd2c1bf99c4310e09f568386ea441c9efaada3158859471fe6"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+; Test with a Webauthn
+(env-data {'my-keyset:["WEBAUTHN-a4010103272006215820c18831c6f15306d6271e154842906b68f26c1af79b132dde6f6add79710303bf"]})
+(read-keyset 'my-keyset)
+
+; With an unprefixed WebAuthn
+(env-data {'my-keyset:["a4010103272006215820c18831c6f15306d6271e154842906b68f26c1af79b132dde6f6add79710303bf"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+
+; Test Post Quantum keys, for now, disable
+(env-exec-config ["EnforceKeyFormats", "DisableSlhDsaSignatures"])
+(env-data {'my-keyset:["q29bedaede830a80e5a600ce7e0293ac3f488f30310cdf59b8874c3abfcd6dd52"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+(env-data {'my-keyset:["q72f78dfc767a91a0aa1a234721856015745215e21009d264493d3a7ab85489b823c06036d4b1c1727d27490f1b32547e"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+(env-data {'my-keyset:["qc89946c0f62efc5ba77050dc9fa2eefbf00985ac697e4c1923f11a7d926cadec95085130121be8654aca3647a5508fa4d727ec6e6efca2c4a8a236d7970f1419"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+
+; Test Post Quantum keys, And Enable
+(env-exec-config ["EnforceKeyFormats"])
+(env-data {'my-keyset:["q29bedaede830a80e5a600ce7e0293ac3f488f30310cdf59b8874c3abfcd6dd52"]})
+(read-keyset 'my-keyset)
+
+(env-data {'my-keyset:["q72f78dfc767a91a0aa1a234721856015745215e21009d264493d3a7ab85489b823c06036d4b1c1727d27490f1b32547e"]})
+(read-keyset 'my-keyset)
+
+(env-data {'my-keyset:["qc89946c0f62efc5ba77050dc9fa2eefbf00985ac697e4c1923f11a7d926cadec95085130121be8654aca3647a5508fa4d727ec6e6efca2c4a8a236d7970f1419"]})
+(read-keyset 'my-keyset)
+
+
+; Test Post Quantum keys with missing didgits
+(env-exec-config ["EnforceKeyFormats"])
+(env-data {'my-keyset:["q29bedaede830a80e5a600ce7e0293ac3f488f30310cdf59b8874c3abfcd6dd5"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+(env-data {'my-keyset:["q72f78dfc767a91a0aa1a234721856015745215e21009d264493d3a7ab85489b823c06036d4b1c1727d27490f1b32547"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+(env-data {'my-keyset:["qc89946c0f62efc5ba77050dc9fa2eefbf00985ac697e4c1923f11a7d926cadec95085130121be8654aca3647a5508fa4d727ec6e6efca2c4a8a236d7970f141"]})
+(expect-failure "Bad format" "Invalid keyset format" (read-keyset 'my-keyset))
+
+; Test MultiSig PostQ6auntum
+(env-exec-config ["EnforceKeyFormats"])
+(env-data {'my-keyset:["q29bedaede830a80e5a600ce7e0293ac3f488f30310cdf59b8874c3abfcd6dd52",
+                       "qbfaaa127254a28c06e049a37919a360fee5d4b1bdfaac82504ef89f6a1e53452"]})
+(read-keyset 'my-keyset)
+
+(env-data {'my-keyset:["q72f78dfc767a91a0aa1a234721856015745215e21009d264493d3a7ab85489b823c06036d4b1c1727d27490f1b32547e",
+                       "qbfaaa127254a28c06e049a37919a360fee5d4b1bdfaac82504ef89f6a1e53452"]})
+(read-keyset 'my-keyset)
+
+(env-data {'my-keyset:["qc89946c0f62efc5ba77050dc9fa2eefbf00985ac697e4c1923f11a7d926cadec95085130121be8654aca3647a5508fa4d727ec6e6efca2c4a8a236d7970f1419",
+                       "qbfaaa127254a28c06e049a37919a360fee5d4b1bdfaac82504ef89f6a1e53452"]})
+(read-keyset 'my-keyset)

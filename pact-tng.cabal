@@ -1,6 +1,6 @@
 cabal-version:       3.8
 name:                pact-tng
-version:             5.4.1
+version:             5.4.1.1
 -- ^ 4 digit is prerelease, 3- or 2-digit for prod release
 synopsis:            Smart contract language library and REPL
 description:
@@ -55,6 +55,8 @@ common pact-common
   build-depends:
     , Decimal
     , attoparsec
+    , asn1-encoding
+    , asn1-types
     , base
     , base16-bytestring
     , base64-bytestring
@@ -79,8 +81,8 @@ common pact-common
     , vector
     , vector-algorithms
     , megaparsec
-    , crypton >=1.1.2
-    , ram >=0.2.2
+    , crypton
+    , memory
     , safe-exceptions
     , ralist >= 0.4.0.0
     , haskeline
@@ -104,8 +106,11 @@ common pact-common
     -- hyperlane deps
     , binary
     , wide-word
+    , ethereum
     , template-haskell
     , pact-tng:unsafe
+    , hashes >= 0.3
+    , sbv >= 10.0
 
   ghc-options: -Wall -Werror -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   ghc-prof-options: -fprof-auto -fprof-auto-calls
@@ -140,8 +145,7 @@ library pact-crypto
     , text
     , base64-bytestring
     , bytestring
-    , ram >=0.2.2
-    , crypton
+    , hashes >= 0.3
     , safe-exceptions
     , deepseq
 
@@ -159,8 +163,8 @@ library pact-request-api
   visibility: public
   hs-source-dirs: pact-request-api
   build-depends:
-      crypton-asn1-encoding
-    , crypton-asn1-types
+      asn1-encoding
+    , asn1-types
     , cereal
     , pact-tng
     , pact-tng:pact-crypto
@@ -296,8 +300,20 @@ library
     -- Hyperlane
     Pact.Crypto.Hyperlane
 
+  -- SLH DSA
+    Pact.Crypto.SlhDsa.Parameters
+    Pact.Crypto.SlhDsa.SlhDsa
+    Pact.Crypto.SlhDsa.Addresses
+    Pact.Crypto.SlhDsa.MessageDigest
+    Pact.Crypto.SlhDsa.Signature
+    Pact.Crypto.SlhDsa.Utils
+    Pact.Crypto.SlhDsa.ChainwebSlhDsa
+
     -- Coverage
     Pact.Core.Coverage.Types
+    Pact.Core.Verify.Types
+    Pact.Core.Verify.Translate
+    Pact.Core.Verify.Engine
 
   extra-libraries: mpfr
 
@@ -316,6 +332,9 @@ library pact-repl
 
   if (flag(with-native-tracing))
     cpp-options: -DWITH_NATIVE_TRACING
+
+  if (flag(with-native-tracing) || flag(with-funcall-tracing))
+    cpp-options: -DWITH_TRACING
 
   exposed-modules:
     Pact.Core.Repl
@@ -368,10 +387,13 @@ executable gasmodel
   build-depends:
     , pact-tng
     , pact-tng:pact-repl
+    , pact-tng:pact-request-api
+    , pact-tng:pact-crypto
     , criterion
     , terminal-progress-bar
     , neat-interpolation
     , hedgehog
+    , random
     , pact-tng:test-utils
 
   other-modules:
@@ -380,6 +402,7 @@ executable gasmodel
     Pact.Core.GasModel.Serialization
     Pact.Core.GasModel.ModuleLoadBench
     Pact.Core.GasModel.ModuleDepsBench
+    Pact.Core.GasModel.SigsBench
     Pact.Core.GasModel.Utils
 
   ghc-options:         -Wall -threaded -rtsopts -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
@@ -577,6 +600,7 @@ test-suite core-tests
     , wai-logger
     , fast-logger
     , property-matchers
+    , hashes >= 0.3
 
   other-modules:
     , Pact.Core.Test.CommandTests
@@ -604,6 +628,7 @@ test-suite core-tests
     , Pact.Core.Test.PactContinuationTest
     , Pact.Core.Test.ClientTests
     , Pact.Core.Test.ServerUtils
+    , Pact.Core.Test.SlhSignaturesTests
     , Pact.Core.Test.TransitiveDependencyTests
     , Pact.Core.Test.ReplTestUtils
     , Pact.Core.Test.TypecheckerTests

@@ -1,0 +1,64 @@
+;; verify-z3.repl — Test the (verify) REPL command with Z3/SBV
+;;
+;; This test loads a contract with @model annotations and verifies them.
+;; Requires: pact-pq binary built with Z3/SBV support (sbv >= 10.0)
+
+;; ── Test 1: verified-accounts example ────────────────────────────────────────
+(env-keys ["accountadmin" "user123" "user456"])
+(env-data { "accounts-admin-keyset": ["accountadmin"] })
+
+(begin-tx "Load accounts module")
+(load "../examples/verified-accounts/accounts.pact")
+(commit-tx)
+
+;; Verify — should find @model annotations and run Z3
+(expect-that "verify accounts finds @model"
+  (compose (contains "Verification") (= true))
+  (verify "accounts"))
+
+;; ── Test 2: inline module with @model ────────────────────────────────────────
+(env-data { "test-ks": { "keys": ["test-key"], "pred": "keys-all" } })
+(env-sigs [{ "key": "test-key", "caps": [] }])
+
+(begin-tx "Load test module with @model")
+(define-keyset "test-ks" (read-keyset "test-ks"))
+
+(module verify-test-mod "test-ks"
+  @doc "Module with @model annotations for Z3 verification testing"
+
+  (defschema balance-schema
+    @model [(invariant (>= balance 0.0))]
+    balance:decimal
+    owner:string
+  )
+
+  (deftable balances:{balance-schema})
+
+  (defun transfer:string (from:string to:string amount:decimal)
+    @model [(property (> amount 0.0))
+            (property (!= from ""))
+            (property (!= to ""))
+            (property (!= from to))]
+    "Transfer amount from one account to another"
+    (enforce (> amount 0.0) "Amount must be positive")
+    (enforce (!= from to) "Cannot transfer to self")
+    (enforce (!= from "") "Sender must not be empty")
+    (enforce (!= to "") "Receiver must not be empty")
+    (format "Transferred {} from {} to {}" [amount from to])
+  )
+
+  (defun get-balance:decimal (account:string)
+    @model [(property (!= account ""))]
+    (enforce (!= account "") "Account must not be empty")
+    0.0
+  )
+)
+(create-table balances)
+(commit-tx)
+
+;; Verify the test module
+(expect-that "verify test module finds @model"
+  (compose (contains "Verification") (= true))
+  (verify "verify-test-mod"))
+
+(print "=== Z3 VERIFY REPL TEST PASSED ===")

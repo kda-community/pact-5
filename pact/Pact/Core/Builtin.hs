@@ -798,6 +798,7 @@ data ReplOnlyBuiltin
   | RLoad
   | RLoadWithEnv
   | RTypecheck
+  | RVerify
   deriving (Show, Enum, Bounded, Eq, Generic)
 
 
@@ -849,6 +850,7 @@ instance IsBuiltin ReplOnlyBuiltin where
     RLoad -> 1
     RLoadWithEnv -> 2
     RTypecheck -> 1
+    RVerify -> 1
 
 -- Note: commented out natives are
 -- to be implemented later
@@ -935,6 +937,7 @@ replBuiltinsToText = \case
   RLoad -> "load"
   RLoadWithEnv -> "load-with-env"
   RTypecheck -> "typecheck"
+  RVerify -> "verify"
 
 replBuiltinToText :: (t -> Text) -> ReplBuiltin t -> Text
 replBuiltinToText f = \case

@@ -30,11 +30,6 @@
 
 module Pact.Core.Command.Types
   ( Command(..),cmdPayload,cmdSigs,cmdHash
-  , PactHash.Hash
-  , PactHash.parseHash
-  , PactHash.hash
-  , PublicMeta(..)
-  , StableEncoding(..)
   , verifyUserSig
   , verifyUserSigs
   , verifyCommand
@@ -47,17 +42,6 @@ module Pact.Core.Command.Types
   , Signer(..),siScheme, siPubKey, siAddress, siCapList
   , UserSig(..)
   , PactResult(..)
-  , SigCapability(..)
-  , CapToken(..)
-  , QualifiedName(..)
-  , PublicKeyText(..)
-  , DefPactId(..)
-  , Verifier
-  , ParsedVerifierProof
-  , ChainId
-  , GasLimit
-  , TTLSeconds
-  , NetworkId
   , _PactResultOk
   , _PactResultErr
   , CommandResult(..),crReqKey,crTxId,crResult,crGas,crLogs,crEvents
@@ -95,7 +79,6 @@ import Pact.Core.Capabilities
 import Pact.Core.ChainData
 import Pact.Core.DefPacts.Types
 import Pact.Core.Guards
-import Pact.Core.Names
 import Pact.Core.Gas.Types
 import qualified Pact.Core.Hash as PactHash
 import Pact.Core.Persistence.Types
@@ -109,6 +92,7 @@ import Pact.Core.Command.Crypto  as Base
 import Pact.Core.Evaluate
 import Pact.Core.Info
 import Pact.Core.Errors
+import qualified Pact.Crypto.SlhDsa.ChainwebSlhDsa as SLHDSA
 
 import qualified Pact.JSON.Decode as JD
 import qualified Pact.JSON.Encode as J
@@ -210,8 +194,9 @@ verifyUserSigs hsh sigsAndSigners
 
 verifyUserSig :: PactHash.Hash -> UserSig -> Signer -> Either String ()
 verifyUserSig msg sig Signer{..} = do
+  -- The caller is supposed to filter out not allowed schemes
   case (sig, scheme) of
-    (ED25519Sig edSig, ED25519) -> do
+    (PlainSig edSig, ED25519) -> do
       for_ _siAddress $ \addr -> do
         unless (_siPubKey == addr) $ Left "address does not match pubkey"
       pk <- over _Left ("failed to parse ed25519 pubkey: " <>) $
@@ -219,6 +204,12 @@ verifyUserSig msg sig Signer{..} = do
       edSigParsed <- over _Left ("failed to parse ed25519 signature: " <>) $
         parseEd25519Signature =<< B16.decode (Text.encodeUtf8 edSig)
       verifyEd25519Sig msg pk edSigParsed
+
+    (PlainSig slhSig, SlhDsaSha128s) -> SLHDSA.verifySig SlhDsaSha128s _siPubKey slhSig msg
+
+    (PlainSig slhSig, SlhDsaSha192s) -> SLHDSA.verifySig SlhDsaSha192s _siPubKey slhSig msg
+
+    (PlainSig slhSig, SlhDsaSha256s) -> SLHDSA.verifySig SlhDsaSha256s _siPubKey slhSig msg
 
     (WebAuthnSig waSig, WebAuthn) -> do
       let
@@ -236,7 +227,7 @@ verifyUserSig msg sig Signer{..} = do
         , show _siScheme
         , "does not match signature type"
         , case sig of
-          ED25519Sig _ -> "ED25519"
+          PlainSig _ -> "ED25519"
           WebAuthnSig _ -> "WebAuthn"
         ]
   where scheme = fromMaybe defPPKScheme _siScheme

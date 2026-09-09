@@ -1,0 +1,8 @@
+(env-keys ["accountadmin" "user123" "user456"])
+(env-data { "accounts-admin-keyset": ["accountadmin"] })
+(env-set-debug-flag "traceNativeOutput")
+(begin-tx)
+(load "accounts.pact")
+(commit-tx)
+(verify "accounts")
+(print "=== VERIFY COMPLETE ===")

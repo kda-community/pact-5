@@ -909,9 +909,7 @@
   "Account name does not conform to the max length requirement"
   (remediate "Classically, category theory is a useful tool not so much because of the light it sheds on any particular mathematical discipline but instead because categories are so ubiquitous: mathematical objects in many different settings (sets, groups, smooth manifolds, and so on) can be organized into categories. Moreover, many elementary mathematical concepts can be described in purely categorical terms and therefore make sense in each of these settings." 1.0))
 
-;; ======================================================
 ;; test transfer, gas events
-;; ======================================================
 (commit-tx)
 (begin-tx)
 (env-events true)
@@ -955,9 +953,7 @@
   (install-capability (coin.TRANSFER 'doug 'emily 2.0)))
 (rollback-tx)
 
-;; ======================================================
 ;; test xchain
-;; ======================================================
 
 (begin-tx)
 (env-data {'k: ['keys2]})
@@ -997,9 +993,7 @@
 (rollback-tx)
 
 
-;; ======================================================
 ;; test allocation release
-;; ======================================================
 
 (begin-tx)
 (test-capability (coin.GENESIS))
@@ -1016,9 +1010,7 @@
   (map (remove 'module-hash) (env-events true)))
 (rollback-tx)
 
-;; ======================================================
 ;; test chainweb single-key naming protocol
-;; ======================================================
 
 (begin-tx)
 (env-data

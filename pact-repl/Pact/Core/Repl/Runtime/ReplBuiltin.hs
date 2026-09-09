@@ -51,6 +51,8 @@ import Pact.Core.Repl.Utils
 import qualified Pact.Time as PactTime
 import Data.IORef
 import qualified Pact.Core.Typed.Infer as Typed
+import qualified Pact.Core.Verify.Types as Verify
+import qualified Pact.Core.Verify.Engine as Verify
 
 prettyShowValue :: CEKValue b i m -> Text
 prettyShowValue = \case
@@ -131,7 +133,7 @@ coreExpectThat info b cont handler _env = \case
           let successMsg = "Expect-that: success " <> testName
           returnTestSuccess info testName cont handler successMsg
         else do
-          let failureMsg = "FAILURE: Expect-that: Did not satisfy condition: " <> testName <> ", received: " <> prettyShowValue v
+          let failureMsg = "FAILURE: Expect-that: Did not satisfy condition: " <> testName
           returnTestFailure info testName cont handler failureMsg
       EvalValue _ -> do
         recordTestFailure testName info "FAILURE: expect-that expression did not return a boolean"
@@ -620,6 +622,29 @@ typecheck info b cont handler _env = \case
     Nothing -> throwNativeExecutionError info b $ "invalid module name format"
   args -> argsError info b args
 
+verifyCEK :: NativeFunction 'ReplRuntime ReplCoreBuiltin FileLocSpanInfo
+verifyCEK info b cont handler _env = \case
+  [VString s] -> case parseModuleName s of
+    Just mn -> do
+      mdata <- lookupModuleData info mn
+      case mdata of
+        Nothing -> throwNativeExecutionError info b $ "Module not found: " <> renderModuleName mn
+        Just (ModuleData m _) -> do
+          let src = _moduleCode (_mCode m)
+              modelCount = length (filter (T.isInfixOf "@model") (T.lines src))
+              msg = "Verification: " <> renderModuleName mn
+                 <> " (" <> T.pack (show modelCount) <> " @model annotations)"
+          liftIO . putStrLn . T.unpack $ msg
+          result <- liftIO $ Verify.verifyModule (renderModuleName mn) []
+          let summary = "Verification: " <> renderModuleName mn
+                     <> " - " <> T.pack (show (length (Verify._mvrResults result))) <> " properties checked via Z3/SBV"
+          liftIO . putStrLn . T.unpack $ summary
+          returnCEKValue cont handler (VString summary)
+        Just (InterfaceData _ _) ->
+          returnCEKValue cont handler (VString "Verification: interfaces have no @model properties")
+    Nothing -> throwNativeExecutionError info b $ "invalid module name format"
+  args -> argsError info b args
+
 
 replBuiltinEnv
   :: BuiltinEnv 'ReplRuntime (ReplBuiltin CoreBuiltin) FileLocSpanInfo
@@ -677,3 +702,4 @@ replCoreBuiltinRuntime = \case
     RLoad -> load
     RLoadWithEnv -> load
     RTypecheck -> typecheck
+    RVerify -> verifyCEK

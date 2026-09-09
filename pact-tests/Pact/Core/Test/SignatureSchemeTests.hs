@@ -21,8 +21,10 @@ import Pact.Core.Command.Crypto
 import Pact.Core.Command.Client
 import qualified Pact.JSON.Encode as J
 import Pact.Core.PactValue
+import Pact.Core.Hash
 import Pact.Core.Command.RPC
 import Pact.Core.Command.Util
+import Pact.Core.Signer
 
 
 ---- HELPER DATA TYPES AND FUNCTIONS ----
@@ -160,7 +162,7 @@ testPublicKeyImport =
       [signer] <- toSigners [someED25519Pair]
       [(DynEd25519KeyPair (pubKey, privKey),_)] <- mkKeyPairs $ toApiKeyPairs [someED25519Pair]
       let sig = signEd25519 pubKey privKey hsh
-          myUserSig = ED25519Sig $ toB16Text $ exportEd25519Signature sig
+          myUserSig = PlainSig $ toB16Text $ exportEd25519Signature sig
           wrongSigner = Lens.set siAddress wrongAddr signer
       isLeft (verifyUserSig hsh myUserSig wrongSigner) @?= True
 
@@ -170,7 +172,7 @@ testPublicKeyImport =
       [signer] <- toSigners [someED25519Pair]
       [(DynEd25519KeyPair (pubKey, privKey),_)] <- mkKeyPairs $ toApiKeyPairs [someED25519Pair]
       let sig = signEd25519 pubKey privKey hsh
-          myUserSig = ED25519Sig $ toB16Text $ exportEd25519Signature sig
+          myUserSig = PlainSig $ toB16Text $ exportEd25519Signature sig
           wrongScheme = WebAuthn
           wrongSigner = Lens.set siScheme (Just wrongScheme) signer
       isLeft (verifyUserSig hsh myUserSig wrongSigner) @?= True

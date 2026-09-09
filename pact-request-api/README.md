@@ -1,5 +1,4 @@
 pact-request-api
-================
 
 This is the public interface to `pact-5`. Downstream users of the
 pact interpreter should use functions and types from this package,

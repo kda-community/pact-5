@@ -25,7 +25,15 @@ data Principal
   = K !PublicKeyText
     -- ^ format: `k:public key`, where hex public key
     -- is the text public key of the underlying keyset
+  | Q !PublicKeyText
+    -- ^ format: `q:public key`, where hex public key
+    -- is the text public key of the underlying keyset
+    -- for SLH DSA keys
   | W !Text !Text
+    -- ^ format: `w:b64url-encoded hash:pred` where
+    -- the hash is a b64url-encoding of the hash of
+    -- the list of public keys of the multisig keyset
+  | X !Text !Text
     -- ^ format: `w:b64url-encoded hash:pred` where
     -- the hash is a b64url-encoding of the hash of
     -- the list of public keys of the multisig keyset
@@ -51,7 +59,9 @@ mkPrincipalIdent :: Principal -> Text
 mkPrincipalIdent = \case
   P pid n -> "p:" <> renderDefPactId pid <> ":" <> n
   K pk -> "k:" <> renderPublicKeyText pk
+  Q pk -> "q:" <> renderPublicKeyText pk
   W ph n -> "w:" <> ph <> ":" <> n
+  X ph n -> "x:" <> ph <> ":" <> n
   R n -> "r:" <> renderKeySetName n
   U n ph -> "u:" <> n <> ":" <> ph
   M mn n -> "m:" <> renderModuleName mn <> ":" <> n
@@ -60,18 +70,22 @@ mkPrincipalIdent = \case
 showPrincipalType :: Principal -> Text
 showPrincipalType = \case
   K{} -> "k:"
+  Q{} -> "q:"
   W{} -> "w:"
+  X{} -> "x:"
   R{} -> "r:"
   U{} -> "u:"
   M{} -> "m:"
   P{} -> "p:"
   C{} -> "c:"
 
-principalParser :: Parser Principal
-principalParser = alts <* void eof
+principalParser :: Bool -> Parser Principal
+principalParser slhDsaDisabled = alts <* void eof
   where
     alts = kParser
+       <|> (if slhDsaDisabled then empty else qParser)
        <|> wParser
+       <|> (if slhDsaDisabled then empty else xParser)
        <|> rParser
        <|> uParser
        <|> mParser
@@ -80,11 +94,19 @@ principalParser = alts <* void eof
 
     kParser = do
       prefix 'k'
-      K <$> hexKeyFormat
+      K <$> hexKeyFormat 64
+
+    qParser = do
+      prefix 'q'
+      (Q . prefixWithQ) <$> choice [hexKeyFormat 128, hexKeyFormat 96, hexKeyFormat 64]
 
     wParser = do
       prefix 'w'
       binCtor W base64UrlHashParser nameMatcher
+
+    xParser = do
+      prefix 'x'
+      binCtor X base64UrlHashParser nameMatcher
 
     rParser = do
       prefix 'r'
@@ -109,7 +131,9 @@ principalParser = alts <* void eof
     binCtor :: (a -> b -> Principal) -> Parser a -> Parser b -> Parser Principal
     binCtor ctor p1 p2 = ctor <$> p1 <*> (char ':' *> p2)
 
-    hexKeyFormat = PublicKeyText . T.pack <$> count 64 (satisfy isHexDigit)
+    hexKeyFormat len = PublicKeyText . T.pack <$> count len (satisfy isHexDigit)
+
+    prefixWithQ (PublicKeyText t) = PublicKeyText ("q" <> t)
 
     base64UrlUnpaddedAlphabet :: BS.ByteString
     base64UrlUnpaddedAlphabet =

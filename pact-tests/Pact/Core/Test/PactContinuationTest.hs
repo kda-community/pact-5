@@ -37,6 +37,8 @@ import Pact.Core.Command.Types
 import Pact.Core.Environment.Types
 import Pact.Core.Errors
 import Pact.Core.SPV
+import Pact.Core.StableEncoding
+import Pact.Core.Signer
 import Pact.Core.PactValue
 import Pact.Core.DefPacts.Types
 import Pact.Core.Command.Util
