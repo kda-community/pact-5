@@ -27,7 +27,8 @@ You can use this function to set one or more of the following configuration flag
 - "PreserveModuleNameBug"
 - "PreserveNsModuleInstallBug"
 - "PreserveShowDefs"
-  
+- "DisableSlhDsaSignatures"
+
 ### Basic syntax
 
 To look up the current configuration settings, use the following syntax:

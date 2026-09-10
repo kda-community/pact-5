@@ -61,6 +61,8 @@ common pact-common
     , bytestring
     , cereal
     , containers
+    , crypton-asn1-encoding
+    , crypton-asn1-types
     , data-default
     , deepseq
     , direct-sqlite
@@ -106,6 +108,7 @@ common pact-common
     , wide-word
     , template-haskell
     , pact-tng:unsafe
+    , hashes >= 0.3
 
   ghc-options: -Wall -Werror -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   ghc-prof-options: -fprof-auto -fprof-auto-calls
@@ -296,6 +299,15 @@ library
     -- Hyperlane
     Pact.Crypto.Hyperlane
 
+  -- SLH DSA
+    Pact.Crypto.SlhDsa.Parameters
+    Pact.Crypto.SlhDsa.SlhDsa
+    Pact.Crypto.SlhDsa.Addresses
+    Pact.Crypto.SlhDsa.MessageDigest
+    Pact.Crypto.SlhDsa.Signature
+    Pact.Crypto.SlhDsa.Utils
+    Pact.Crypto.SlhDsa.ChainwebSlhDsa
+
     -- Coverage
     Pact.Core.Coverage.Types
 
@@ -368,10 +380,13 @@ executable gasmodel
   build-depends:
     , pact-tng
     , pact-tng:pact-repl
+    , pact-tng:pact-request-api
+    , pact-tng:pact-crypto
     , criterion
     , terminal-progress-bar
     , neat-interpolation
     , hedgehog
+    , random
     , pact-tng:test-utils
 
   other-modules:
@@ -380,6 +395,7 @@ executable gasmodel
     Pact.Core.GasModel.Serialization
     Pact.Core.GasModel.ModuleLoadBench
     Pact.Core.GasModel.ModuleDepsBench
+    Pact.Core.GasModel.SigsBench
     Pact.Core.GasModel.Utils
 
   ghc-options:         -Wall -threaded -rtsopts -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
@@ -604,6 +620,7 @@ test-suite core-tests
     , Pact.Core.Test.PactContinuationTest
     , Pact.Core.Test.ClientTests
     , Pact.Core.Test.ServerUtils
+    , Pact.Core.Test.SlhSignaturesTests
     , Pact.Core.Test.TransitiveDependencyTests
     , Pact.Core.Test.ReplTestUtils
     , Pact.Core.Test.TypecheckerTests

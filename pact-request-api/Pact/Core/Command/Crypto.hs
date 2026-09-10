@@ -37,6 +37,7 @@ module Pact.Core.Command.Crypto
   , parseEd25519Signature
   , parseWebAuthnPublicKey
   , parseWebAuthnPrivateKey
+  , parseECDSAP256PrivateKey
   , parseWebAuthnSignature
 
   -- * Use an Ed25519 key to sign a payload.
@@ -124,14 +125,17 @@ import Crypto.Random.Types
 import qualified Pact.JSON.Encode as J
 
 -- | The type of parsed signatures
-data UserSig = ED25519Sig T.Text
+-- It's proabbly better to not guess the signature type betwenn ED25519 and SLH-DSA at parsing time
+-- But let verifyUserSig (which has the scheme information) to validate.
+-- A PlainSig is just a basic text signature: Either a hex EDD25519 or a Base64 SLH-DSA
+data UserSig = PlainSig T.Text
              | WebAuthnSig WebAuthnSignature
   deriving (Eq, Ord, Show, Generic)
 
 instance NFData UserSig
 
 instance J.Encode UserSig where
-  build (ED25519Sig s) =
+  build (PlainSig s) =
     J.object [ "sig" J..= s ]
   build (WebAuthnSig sig) = J.object
     [ "sig" J..= T.decodeUtf8 (BSL.toStrict $ J.encode sig) ]
@@ -140,16 +144,16 @@ instance J.Encode UserSig where
 instance A.FromJSON UserSig where
   parseJSON x =
     parseWebAuthnStringified x <|>
-    parseEd25519 x
+    parsePlainSig x
     where
       parseWebAuthnStringified = A.withObject "UserSig" $ \o -> do
         t <- o A..: "sig"
         case A.decode (BSL.fromStrict $ T.encodeUtf8 t) of
           Nothing -> fail "Could not decode signature"
           Just webauthnSig -> return $ WebAuthnSig webauthnSig
-      parseEd25519 = A.withObject "UserSig" $ \o -> do
+      parsePlainSig = A.withObject "UserSig" $ \o -> do
         t <- o A..: "sig"
-        return $ ED25519Sig t
+        return $ PlainSig t
 
 
 verifyEd25519Sig :: PactHash.Hash -> Ed25519.PublicKey -> Ed25519.Signature -> Either String ()
