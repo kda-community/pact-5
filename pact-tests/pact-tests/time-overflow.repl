@@ -1,0 +1,190 @@
+;; time-overflow.repl: time-overflow unit tests
+
+;----------------------------------------------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------------
+; Part 1 => Test using the old behaviour = with DisableSafeTime => Bug appear
+(begin-tx)
+
+(env-exec-config ["DisableSafeTime"])
+(defconst PLUS_1K_YEARS (* 1000.0 (days 365.2425)))
+(defconst MINUS_1K_YEARS (- PLUS_1K_YEARS))
+
+(defconst PLUS_300K_YEARS (* 300000.0 (days 365.2425)))
+(defconst MINUS_300K_YEARS (- PLUS_300K_YEARS))
+
+(defconst TODAY "2026-02-26T00:00:00Z")
+(defconst TODAY_PRECISE "2026-02-26T00:00:00.123456Z")
+(defconst LONG_TIME_IN_FUTURE "294134-11-26T00:00:00Z")
+(defconst LONG_TIME_IN_FUTURE_PRECISE "294134-11-26T00:00:00.123456Z")
+(defconst LONG_TIME_IN_PAST "-290000-11-07T00:00:00Z")
+
+; Do sanity checks
+(expect-that "Adding small quantities of time is OK"    (compose (format-time "%F") (= "3026-02-26")) (add-time (time TODAY) PLUS_1K_YEARS))
+(expect-that "Deducting small quantities of time is OK" (compose (format-time "%F") (= "1026-02-26")) (add-time (time TODAY) MINUS_1K_YEARS))
+
+
+; Add 300K years in the future => And we come in the past => WTF
+(expect-that "Time is fucking wrong" (compose (format-time "%Y") (= "-282528")) (add-time (time TODAY) PLUS_300K_YEARS))
+
+; Go 300K years in the past => And we come in the future => WTF
+(expect-that "Time is fucking wrong" (compose (format-time "%Y") (= "286580")) (add-time (time TODAY) MINUS_300K_YEARS))
+
+; Start from year 294k and add 1k, => Overflow, we are in the past
+(expect-that "Time is fucking wrong" (compose (format-time "%Y") (= "-289420")) (add-time (time LONG_TIME_IN_FUTURE) PLUS_1K_YEARS))
+
+; Start from year -290k and substract 1k, => Overflow, we are in the future
+(expect-that "Time is fucking wrong" (compose (format-time "%Y") (= "293554")) (add-time (time LONG_TIME_IN_PAST) MINUS_1K_YEARS))
+
+; Diff time between FUTURE and PAST => Overflow, we obtain a negative number
+(expect "Time diff is negative, should be positive in theory" -13253875309.551616 (diff-time (time LONG_TIME_IN_FUTURE) (time LONG_TIME_IN_PAST)))
+
+; Check that problematic datetime can be read from the env data
+(env-data {"a": {"time":LONG_TIME_IN_FUTURE}})
+(expect-that "Read OK" (compose (format-time "%F") (= "294134-11-26")) (read-msg 'a))
+
+(env-data {"a": {"timep":LONG_TIME_IN_FUTURE_PRECISE}})
+(expect-that "Read OK" (compose (format-time "%F") (= "294134-11-26")) (read-msg 'a))
+
+(env-data {"a": [{"time":LONG_TIME_IN_FUTURE}]})
+(expect-that "Read OK" (compose (format-time "%F") (= "294134-11-26")) (at 0 (read-msg 'a)))
+
+(env-data {"a": {"my-field": {"time":LONG_TIME_IN_FUTURE}}})
+(expect-that "Read OK" (compose (format-time "%F") (= "294134-11-26")) (at 'my-field (read-msg 'a)))
+
+(commit-tx)
+
+
+;----------------------------------------------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------------
+; Part 2 => Do exactly the sames tests with the new behaviour = without DisableSafeTime => And show it's fixed
+(begin-tx)
+; Do exact same thing but remove the flag
+
+(env-exec-config [])
+
+; Do sanity checks
+(expect-that "Adding small quantities of time is OK"    (compose (format-time "%F") (= "3026-02-26")) (add-time (time TODAY) PLUS_1K_YEARS))
+(expect-that "Deducting small quantities of time is OK" (compose (format-time "%F") (= "1026-02-26")) (add-time (time TODAY) MINUS_1K_YEARS))
+
+; Add 300K years => Pact should now catch it
+(expect-failure "Time overflow" "Time overflow" (add-time (time TODAY) PLUS_300K_YEARS))
+
+; Go 300K years in the past => Pact should now catch it
+(expect-failure "Time overflow" "Time overflow" (add-time (time TODAY) MINUS_300K_YEARS))
+
+; Start from year 294k and add 1k, => Pact should now catch it
+(expect-failure "Time overflow" "Time overflow" (add-time (time LONG_TIME_IN_FUTURE) PLUS_1K_YEARS))
+
+; Start from year -290k and substract 1k, => => Pact should now catch it
+(expect-failure "Time overflow" "Time overflow" (add-time (time LONG_TIME_IN_PAST) MINUS_1K_YEARS))
+
+(expect-failure "Time overflow" "Time overflow" (diff-time (time LONG_TIME_IN_FUTURE) (time LONG_TIME_IN_PAST)))
+
+; Check that problematic datetime can NOT  be read from the env data
+(env-data {"a": {"time":LONG_TIME_IN_FUTURE}})
+(expect-failure "Time overflow" "Time overflow" (read-msg 'a))
+
+(env-data {"a": {"timep":LONG_TIME_IN_FUTURE_PRECISE}})
+(expect-failure "Time overflow" "Time overflow" (read-msg 'a))
+
+(env-data {"a": [{"time":LONG_TIME_IN_FUTURE}]})
+(expect-failure "Time overflow" "Time overflow" (at 0 (read-msg 'a)))
+
+(env-data {"a": {"my-field": {"time":LONG_TIME_IN_FUTURE}}})
+(expect-failure "Time overflow" "Time overflow" (at 'my-field (read-msg 'a)))
+
+
+; But valid datetime can still be read
+(env-data {"a": {"time":TODAY}})
+(expect-that "Read OK" (compose (format-time "%F") (= "2026-02-26")) (read-msg 'a))
+
+(env-data {"a": {"timep":TODAY_PRECISE}})
+(expect-that "Read OK" (compose (format-time "%F") (= "2026-02-26")) (read-msg 'a))
+
+(env-data {"a": [{"time":TODAY}]})
+(expect-that "Read OK" (compose (format-time "%F") (= "2026-02-26")) (at 0 (read-msg 'a)))
+
+(env-data {"a": {"my-field": {"time":TODAY}}})
+(expect-that "Read OK" (compose (format-time "%F") (= "2026-02-26")) (at 'my-field (read-msg 'a)))
+
+(commit-tx)
+
+
+; Part 3 => Test Edge cases with new behaviour
+(begin-tx)
+
+(env-exec-config [])
+
+; The MJD Epoch
+(defconst MJD (time "1858-11-17T00:00:00Z"))
+
+; The MJD Epoch PLUS 1s
+(defconst MJD-PLUS (time "1858-11-17T00:00:01Z"))
+
+; The MJD Epoch MINUS 1s
+(defconst MJD-MINUS (time "1858-11-16T23:59:59Z"))
+
+
+; We don't use the dafault parser, as it doesn't provide mucro-seconds support
+(defconst MICROS_PARSER "%Y-%m-%dT%H:%M:%S.%vZ")
+
+(defconst HIGH_SAFE_TIME         "147997-05-22T14:00:27.387901Z") ; |=> Supposed to be OK
+(defconst HIGH_SAFE_TIME_ROUNDED "147997-05-22T14:00:27Z")        ; |
+
+(defconst HIGH_UNSAFE_TIME         "147997-05-22T14:00:27.387902Z") ; |=> Supposed to trigger a transaction failure
+(defconst HIGH_UNSAFE_TIME_ROUNDED "147997-05-22T14:00:28Z")        ; |
+
+(defconst LOW_SAFE_TIME         "-144280-05-13T09:59:32.612098Z") ; |=> Supposed to be OK
+(defconst LOW_SAFE_TIME_ROUNDED "-144280-05-13T09:59:33Z")        ; |
+
+
+(defconst LOW_UNSAFE_TIME         "-144280-05-13T09:59:32.612097Z") ; |=> Supposed to trigger a transaction failure
+(defconst LOW_UNSAFE_TIME_ROUNDED "-144280-05-13T09:59:32Z")        ; |
+
+; Check that we are not allowed to use unsafe times, and that safe times are correct
+(expect-that "Good date" (compose (format-time "%F") (= "147997-05-22")) (time HIGH_SAFE_TIME_ROUNDED))
+(expect-that "Good date" (compose (format-time "%F") (= "147997-05-22")) (parse-time MICROS_PARSER HIGH_SAFE_TIME))
+
+(expect-that "Good date" (compose (format-time "%F") (= "-144280-05-13")) (time LOW_SAFE_TIME_ROUNDED))
+(expect-that "Good date" (compose (format-time "%F") (= "-144280-05-13")) (parse-time MICROS_PARSER LOW_SAFE_TIME))
+
+(expect-failure "Bad date" "Time overflow" (time HIGH_UNSAFE_TIME_ROUNDED))
+(expect-failure "Bad date" "Time overflow" (parse-time MICROS_PARSER HIGH_UNSAFE_TIME))
+(expect-failure "Bad date" "Time overflow" (time LOW_UNSAFE_TIME_ROUNDED))
+(expect-failure "Bad date" "Time overflow" (parse-time MICROS_PARSER LOW_UNSAFE_TIME))
+
+
+; Now check that a difference between the two extrem safe dates is correct
+;   => In the range of 292277 positive years = 9217247472000 psotive seconds
+(expect "Future - Past = Positive" 9223372036854.0      (diff-time (time HIGH_SAFE_TIME_ROUNDED)  (time LOW_SAFE_TIME_ROUNDED)))
+(expect "Future - Past = Positive" 9223372036854.775803 (diff-time (parse-time MICROS_PARSER HIGH_SAFE_TIME) (parse-time MICROS_PARSER LOW_SAFE_TIME)))
+
+; Just for being sure we are safe, we do the same thing but in the opposite : Past - Future should be negative
+(expect "Past - Future = Negative" -9223372036854.0 (diff-time (time LOW_SAFE_TIME_ROUNDED)  (time HIGH_SAFE_TIME_ROUNDED)))
+(expect "Past - Future = Negative" -9223372036854.775803 (diff-time (parse-time MICROS_PARSER LOW_SAFE_TIME) (parse-time MICROS_PARSER HIGH_SAFE_TIME)))
+
+
+; Now we test the delta from the MJD Epoch
+
+(defconst HIGH_SAFE_DELTA   4611686018427.387901) ; => Supposed to be OK
+(defconst HIGH_UNSAFE_DELTA 4611686018427.387902) ; => Supposed to trigger a transaction failure
+
+(defconst LOW_SAFE_DELTA   -4611686018427.387902) ; => Supposed to be OK
+(defconst LOW_UNSAFE_DELTA -4611686018427.387903) ; => Supposed to trigger a transaction failure
+
+
+(expect-that "MJD + Safe Delta => In the future"         (compose (format-time "%Y") (= "147997")) (add-time MJD HIGH_SAFE_DELTA))
+(expect-that "MJD + Negative Safe Delta => In the past"  (compose (format-time "%Y") (= "-144280")) (add-time MJD LOW_SAFE_DELTA))
+
+; Using Unsafe deltas => Trigger a failure
+(expect-failure "Bad date" "Time overflow"  (add-time MJD HIGH_UNSAFE_DELTA))
+(expect-failure "Bad date" "Time overflow"  (add-time MJD LOW_UNSAFE_DELTA))
+
+; Final Test using a offseted MJD but with a safe delta should push the date in the overflow zone
+(expect-failure "Bad date" "Time overflow"  (add-time MJD-PLUS HIGH_SAFE_DELTA))
+(expect-failure "Bad date" "Time overflow"  (add-time MJD-MINUS LOW_SAFE_DELTA))
+
+
+; OK -> That's it, I think, at this point, we have a complete coverage now, and there is no possibility of overflow anymore.
+
+(commit-tx)
