@@ -72,7 +72,7 @@ jobs:
       matrix:
         ghc: ["9.8.2", "9.10.3"]
         cabal: ["3.12"]
-        os: ["ubuntu-22.04", "ubuntu-24.04", "macos-14", "macos-15"]
+        os: ["ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04", "macos-15"]
         cabalcache: ["true"]
 
     steps:
@@ -246,7 +246,7 @@ jobs:
 
     env:
       GHC_FOR_RELEASE: "9.10.3"
-      OS_TO_RELEASE: "ubuntu-22.04 ubuntu-24.04 macos-14 macos-15"
+      OS_TO_RELEASE: "ubuntu-22.04 ubuntu-24.04 ubuntu-26.04 macos-15"
       MAIN_LINUX_VERSION: "ubuntu-24.04"
 
     strategy:
