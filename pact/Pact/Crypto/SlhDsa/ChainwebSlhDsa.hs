@@ -1,6 +1,6 @@
 module Pact.Crypto.SlhDsa.ChainwebSlhDsa
-(
-  verifySig
+( verifySig
+, genKeypair
 ) where
 
 import Pact.Crypto.SlhDsa.Parameters
@@ -8,6 +8,8 @@ import Pact.Crypto.SlhDsa.Utils
 import Pact.Crypto.SlhDsa.SlhDsa
 import Pact.Core.Hash
 import Pact.Core.Scheme
+
+import Crypto.Random (MonadRandom)
 
 import qualified Data.ByteString.Short as SB
 import qualified Data.Text as T
@@ -60,7 +62,21 @@ oidFromhash txHash
 verifySig :: PPKScheme -> T.Text -> T.Text -> Hash -> Either String ()
 verifySig pactScheme pkey sig txHash = do
     decodedPkey <- SB.toShort <$> (B16.decode $ TE.encodeUtf8 pkey)
-    decodedSig  <- B64.decodeBase64UrlUnpadded' $ TE.encodeUtf8 sig
+    decodedSig  <- B64.decodeBase64UrlUnpadded $ TE.encodeUtf8 sig
     prm <- paramaterFromScheme pactScheme
     oid <- oidFromhash txHash
     verifySignaturePreHashedWithContext prm chainwebContext oid decodedPkey decodedSig $ unHash txHash
+
+-- | Generate a Chainweb SLH-DSA keypair for the given scheme.
+-- Returns (secretKeyHex, publicKeyHex) where publicKeyHex is the raw
+-- hex-encoded public key — prepend "q:" to form the Kadena account principal.
+-- SK = SK.seed || SK.prf || PK.seed || PK.root  (hex encoded)
+-- PK = PK.seed || PK.root                        (hex encoded)
+genKeypair :: MonadRandom m => PPKScheme -> m (Either String (T.Text, T.Text))
+genKeypair scheme = case paramaterFromScheme scheme of
+    Left  err -> return (Left err)
+    Right prm -> do
+        (sk, pk) <- slhKeyGen prm
+        let skHex = TE.decodeUtf8 $ B16.encode $ SB.fromShort sk
+            pkHex = TE.decodeUtf8 $ B16.encode $ SB.fromShort pk
+        return (Right (skHex, pkHex))

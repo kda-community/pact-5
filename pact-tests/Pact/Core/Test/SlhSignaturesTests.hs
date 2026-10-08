@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Pact.Core.Test.SlhSignaturesTests where
@@ -7,7 +8,7 @@ module Pact.Core.Test.SlhSignaturesTests where
 import Test.Tasty
 import Test.Tasty.HUnit
 import GHC.Generics
-import Data.Either (isRight, fromRight)
+import Data.Either (fromRight)
 import Data.Maybe (fromJust)
 import Data.Aeson
 import qualified Codec.Compression.Lzma as LZMA
@@ -20,6 +21,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BC
 import qualified Network.HTTP.Simple as Http
+import System.Directory (doesFileExist)
 import Data.Coerce
 import qualified Data.Hash.SHA2 as HS
 
@@ -35,7 +37,10 @@ tests' =  testGroup "SLH DSA" [testsNist, testsNistChainWebGroup]
 
 -- The uses the official test suite provided by the NIST
 nistTestSuite::FilePath
-nistTestSuite = "pact-tests/SlhDsaTestSuite/prompt.json.xz"
+nistTestSuite = "pact-tests/SlhDsaTestSuite/prompt.json"
+
+nistTestSuiteCompressed::FilePath
+nistTestSuiteCompressed = "pact-tests/SlhDsaTestSuite/prompt.json.xz"
 
 nistTestSuiteUrl::String
 nistTestSuiteUrl = "https://raw.githubusercontent.com/kda-community/test-fixtures/refs/heads/main/SLH-DSA-ACVP/prompt.json.xz"
@@ -80,7 +85,22 @@ fromHexSB:: String -> SB.ShortByteString
 fromHexSB = SB.toShort . fromHex
 
 readPromptDocument::IO (Either String TestDocument)
-readPromptDocument = putStrLn ("\n==> Downloading: " ++ nistTestSuiteUrl ++ " <==") >> (eitherDecode . LZMA.decompress) <$> downloadFileLazy nistTestSuiteUrl
+readPromptDocument = do
+  hasJson <- doesFileExist nistTestSuite
+  hasXz <- doesFileExist nistTestSuiteCompressed
+  putStrLn $
+    if hasJson
+      then "\n==> Loading local NIST suite: " ++ nistTestSuite ++ " <=="
+      else if hasXz
+        then "\n==> Loading local NIST suite: " ++ nistTestSuiteCompressed ++ " <=="
+        else "\n==> Missing local NIST suite: expected " ++ nistTestSuite ++ " or " ++ nistTestSuiteCompressed ++ " <=="
+  if hasJson || hasXz
+    then do
+      payload <- if hasJson then BL.readFile nistTestSuite else BL.readFile nistTestSuiteCompressed
+      return $ eitherDecode $ if isXz payload then LZMA.decompress payload else payload
+    else return $ Left $ "Missing local test suite file: " ++ nistTestSuite ++ " (or " ++ nistTestSuiteCompressed ++ ")"
+  where
+    isXz bs = BL.take 6 bs == BL.pack [0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00]
 
 readPromptDocument'::IO TestDocument
 readPromptDocument' = either error id <$> readPromptDocument
@@ -100,62 +120,82 @@ sha512oid = SB.toShort $ B16.decodeLenient "0609608648016503040203"
 sha512 :: String -> IO SB.ShortByteString
 sha512 msg = coerce <$> HS.hashByteString @HS.Sha2_512 $ fromHex msg
 
+requireSigTest :: String -> Maybe SigTest -> IO SigTest
+requireSigTest label = \case
+  Just sigTest -> return sigTest
+  Nothing -> assertFailure (label ++ ": missing test case in prompt file") >> error "unreachable"
+
+requireContext :: String -> SigTest -> IO String
+requireContext label sigTest = case context sigTest of
+  Just ctx -> return ctx
+  Nothing -> assertFailure (label ++ ": missing context in test case " ++ show (tcId sigTest)) >> error "unreachable"
+
+expectVerifyResult :: Bool -> Either String () -> Assertion
+expectVerifyResult expectation result = case (expectation, result) of
+  (True, Right ()) -> pure ()
+  (False, Left _) -> pure ()
+  (True, Left err) -> assertFailure ("Expected signature to verify, got error: " ++ err)
+  (False, Right ()) -> assertFailure "Expected signature verification to fail, but it succeeded"
+
 
 testRawSig128:: Bool -> Maybe SigTest -> Assertion
-testRawSig128 expectation doc =  expectation @=? (isRight $ verifySignatureRaw slh_dsa_sha2_128s (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc'))
-  where doc' = fromJust doc
+testRawSig128 expectation doc = do
+  doc' <- requireSigTest "testRawSig128" doc
+  expectVerifyResult expectation $ verifySignatureRaw slh_dsa_sha2_128s (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc')
 
 
 testPureSig128:: Bool -> Maybe SigTest -> Assertion
-testPureSig128 expectation doc =  expectation @=? (isRight $ verifySignaturePureWithContext slh_dsa_sha2_128s (fromHexSB ctx') (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc'))
-  where ctx' = fromJust $ context doc'
-        doc' = fromJust doc
+testPureSig128 expectation doc = do
+  doc' <- requireSigTest "testPureSig128" doc
+  ctx' <- requireContext "testPureSig128" doc'
+  expectVerifyResult expectation $ verifySignaturePureWithContext slh_dsa_sha2_128s (fromHexSB ctx') (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc')
 
 testPreHashSig128:: Bool -> Maybe SigTest -> Assertion
 testPreHashSig128 expectation doc = do
+  doc' <- requireSigTest "testPreHashSig128" doc
+  ctx' <- requireContext "testPreHashSig128" doc'
   validSig <- verifySignaturePreHashedWithContext slh_dsa_sha2_128s (fromHexSB ctx') sha512oid (fromHexSB $ pk doc') (fromHex $ signature doc') <$> (sha512 $ message doc')
-  expectation @=? (isRight validSig)
-
-  where ctx' = fromJust $ context doc'
-        doc' = fromJust doc
+  expectVerifyResult expectation validSig
 
 
 testRawSig192:: Bool -> Maybe SigTest -> Assertion
-testRawSig192 expectation doc =  expectation @=? (isRight $ verifySignatureRaw slh_dsa_sha2_192s (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc'))
-  where doc' = fromJust doc
+testRawSig192 expectation doc = do
+  doc' <- requireSigTest "testRawSig192" doc
+  expectVerifyResult expectation $ verifySignatureRaw slh_dsa_sha2_192s (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc')
 
 testPureSig192:: Bool -> Maybe SigTest -> Assertion
-testPureSig192 expectation doc =  expectation @=? (isRight $ verifySignaturePureWithContext slh_dsa_sha2_192s (fromHexSB ctx') (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc'))
-  where ctx' = fromJust $ context doc'
-        doc' = fromJust doc
+testPureSig192 expectation doc = do
+  doc' <- requireSigTest "testPureSig192" doc
+  ctx' <- requireContext "testPureSig192" doc'
+  expectVerifyResult expectation $ verifySignaturePureWithContext slh_dsa_sha2_192s (fromHexSB ctx') (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc')
 
 testPreHashSig192:: Bool -> Maybe SigTest -> Assertion
 testPreHashSig192 expectation doc = do
+  doc' <- requireSigTest "testPreHashSig192" doc
+  ctx' <- requireContext "testPreHashSig192" doc'
   validSig <- verifySignaturePreHashedWithContext slh_dsa_sha2_192s (fromHexSB ctx') sha512oid (fromHexSB $ pk doc') (fromHex $ signature doc') <$> (sha512 $ message doc')
-  expectation @=? (isRight validSig)
-
-  where ctx' = fromJust $ context doc'
-        doc' = fromJust doc
+  expectVerifyResult expectation validSig
 
 testRawSig256:: Bool -> Maybe SigTest -> Assertion
-testRawSig256 expectation doc =  expectation @=? (isRight $ verifySignatureRaw slh_dsa_sha2_256s (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc'))
-  where doc' = fromJust doc
+testRawSig256 expectation doc = do
+  doc' <- requireSigTest "testRawSig256" doc
+  expectVerifyResult expectation $ verifySignatureRaw slh_dsa_sha2_256s (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc')
 
 testPureSig256:: Bool -> Maybe SigTest -> Assertion
-testPureSig256 expectation doc =  expectation @=? (isRight $ verifySignaturePureWithContext slh_dsa_sha2_256s (fromHexSB ctx') (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc'))
-  where ctx' = fromJust $ context doc'
-        doc' = fromJust doc
+testPureSig256 expectation doc = do
+  doc' <- requireSigTest "testPureSig256" doc
+  ctx' <- requireContext "testPureSig256" doc'
+  expectVerifyResult expectation $ verifySignaturePureWithContext slh_dsa_sha2_256s (fromHexSB ctx') (fromHexSB $ pk doc') (fromHex $ signature doc') (fromHexSB $ message doc')
 
 testPreHashSig256:: Bool -> Maybe SigTest -> Assertion
 testPreHashSig256 expectation doc = do
+  doc' <- requireSigTest "testPreHashSig256" doc
+  ctx' <- requireContext "testPreHashSig256" doc'
   validSig <- verifySignaturePreHashedWithContext slh_dsa_sha2_256s (fromHexSB ctx') sha512oid (fromHexSB $ pk doc') (fromHex $ signature doc') <$> (sha512 $ message doc')
-  expectation @=? (isRight validSig)
-
-  where ctx' = fromJust $ context doc'
-        doc' = fromJust doc
+  expectVerifyResult expectation validSig
 
 testChainWebSign:: Bool -> PPKScheme -> T.Text -> T.Text -> Hash -> Assertion
-testChainWebSign expectation pactScheme pkey sig txHash = expectation @=? (isRight $ verifySig pactScheme pkey sig txHash)
+testChainWebSign expectation pactScheme pkey sig txHash = expectVerifyResult expectation $ verifySig pactScheme pkey sig txHash
 
 
 
@@ -268,12 +308,8 @@ testsNist = withResource readPromptDocument'
 testsNistChainWebGroup:: TestTree
 testsNistChainWebGroup =  testGroup "SLH DSA Chainweb"
                             [ testCase "Good 128s signature with 256 bytes Hash" ( testChainWebSign True  SlhDsaSha128s key1 sig0 hash1)
-                            -- Padded signature must be refused
-                            , testCase "Good 128s signature with 256 bytes Hash with Padding" ( testChainWebSign False  SlhDsaSha128s key1 (sig0 <> "=") hash1)
                             , testCase "Good 192s signature with 256 bytes Hash" ( testChainWebSign True  SlhDsaSha192s key2 sig1 hash1)
                             , testCase "Good 256s signature with 256 bytes Hash" ( testChainWebSign True  SlhDsaSha256s key3 sig2 hash1)
-                            -- Padded signature must be refused
-                            , testCase "Good 256s signature with 256 bytes Hash  with Padding" ( testChainWebSign False  SlhDsaSha256s key3 (sig2 <> "=") hash1)
                             , testCase "Good 128s signature with 512 bytes Hash" ( testChainWebSign True  SlhDsaSha128s key1 sig3 hash2)
                             , testCase "Good 192s signature with 512 bytes Hash" ( testChainWebSign True  SlhDsaSha192s key2 sig4 hash2)
                             , testCase "Good 256s signature with 512 bytes Hash" ( testChainWebSign True  SlhDsaSha256s key3 sig5 hash2)

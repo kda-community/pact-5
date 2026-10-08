@@ -5,6 +5,7 @@ module Pact.Crypto.SlhDsa.SlhDsa
 ( verifySignatureRaw
 , verifySignaturePureWithContext
 , verifySignaturePreHashedWithContext
+, slhKeyGen
 ) where
 
 import Prelude hiding (Foldable(..))
@@ -20,6 +21,8 @@ import Pact.Crypto.SlhDsa.MessageDigest
 import Pact.Crypto.SlhDsa.Utils
 import Pact.Crypto.SlhDsa.Signature
 import Pact.Crypto.SlhDsa.Addresses
+
+import Crypto.Random (MonadRandom, getRandomBytes)
 
 
 keyChecked :: Parameter -> PublickKey -> Either String PublickKey
@@ -210,3 +213,73 @@ verifySignaturePreHashedWithContext prm ctx oid pkey rawSig msg = do
     sig   <- toSignatureChecked prm rawSig
     msg'  <- prepareMessage ctx oid msg
     checkPubKeyMatch prm pkey' $ slhDsaPkFromSig prm pkey' sig msg'
+
+
+-------------------------------------------------------------------------------
+-- FIPS-205 §9.1 - Algorithm 17: SLH-DSA Key Generation
+-------------------------------------------------------------------------------
+
+-- FIPS 205 §9.1: slh_keygen
+-- SK = SK.seed || SK.prf || PK.seed || PK.root
+-- PK = PK.seed || PK.root
+--
+-- PK.root is the root node of the top-level XMSS tree.
+-- We compute it by building the WOTS+ public key for every leaf, then
+-- hashing up the Merkle tree — the same forward direction used internally
+-- by the signing algorithm.
+
+type SkSeed = ShortByteString
+
+-- FIPS 205 §5.2 - Algorithm 7: wotsPkGen
+-- Derives a WOTS+ public key directly from the secret seed (no stored SK).
+-- wAddr must be a WOTSHashAddress with kpa already set to the leaf index.
+-- For each of the `len` WOTS+ chain positions:
+--   1. Derive the chain secret via F(PK.seed, addr{ha=i}, SK.seed)
+--   2. Walk the full chain (wotsW-1 steps) to get the public chain element
+--   3. Compress all chain elements into the WOTS+ public key via Tl
+wotsPkGen :: Parameter -> PublicKeySeed -> SkSeed -> Address -> ShortByteString
+wotsPkGen prm pks skSeed wAddr =
+    fips205Tl prm pks (toWOTSPKAddress wAddr)
+    $ zipWith chainUp [0 :: Int ..] skLeaves
+  where
+    len      = wotsLenT prm
+    skLeaves = [ fips205F prm pks wAddr{ha = fromIntegral i} skSeed
+               | i <- [0 .. len - 1] ]
+    chainUp i sk = wotsChain prm pks wAddr{ca = fromIntegral i} 0 (wotsW - 1) sk
+
+-- FIPS 205 §6.1 - Algorithm 9: xmssNodeGen
+-- Computes one Merkle tree node at (height, idx) bottom-up.
+-- height == 0  → leaf = WOTS+ public key for leaf index idx
+-- height >  0  → internal node = H(left, right)
+-- baseAddr must be a BaseAddress (la set to tree layer, ta set to tree index).
+xmssNodeGen :: Parameter -> PublicKeySeed -> SkSeed -> Int -> Int -> Address -> Node
+xmssNodeGen prm pks skSeed idx height baseAddr
+    | height == 0 =
+        -- Build WOTS+ leaf: convert base address into a WOTSHashAddress with kpa=idx
+        wotsPkGen prm pks skSeed (toWOTSHashAddress baseAddr (fromIntegral idx))
+    | otherwise   =
+        fips205H prm pks htAddr leftNode rightNode
+  where
+    -- Hash-tree address: keeps baseAddr shape but sets tree height/index
+    htAddr    = toHashTreeAddress baseAddr (fromIntegral idx)
+    -- Children recurse with the same baseAddr (only height and idx change)
+    leftNode  = xmssNodeGen prm pks skSeed (2 * idx)     (height - 1) baseAddr
+    rightNode = xmssNodeGen prm pks skSeed (2 * idx + 1) (height - 1) baseAddr
+
+-- | Generate an SLH-DSA keypair.  Returns (secretKey, publicKey) where:
+--   secretKey = SK.seed || SK.prf || PK.seed || PK.root   (4*n bytes)
+--   publicKey = PK.seed || PK.root                         (2*n bytes)
+slhKeyGen :: MonadRandom m => Parameter -> m (ShortByteString, ShortByteString)
+slhKeyGen prm = do
+    skSeedBS <- getRandomBytes (n prm)
+    skPrfBS  <- getRandomBytes (n prm)
+    pkSeedBS <- getRandomBytes (n prm)
+    let skSeed = SB.toShort skSeedBS
+        skPrf  = SB.toShort skPrfBS
+        pkSeed = SB.toShort pkSeedBS
+        -- Top-level XMSS tree: layer = d-1, tree index = 0
+        topAddr = BaseAddress { la = fromIntegral (d prm - 1), ta = 0 }
+        pkRoot  = xmssNodeGen prm pkSeed skSeed 0 (h' prm) topAddr
+        sk = SB.concat [skSeed, skPrf, pkSeed, pkRoot]
+        pk = SB.concat [pkSeed, pkRoot]
+    return (sk, pk)
