@@ -57,7 +57,7 @@ common pact-common
     , attoparsec
     , base
     , base16-bytestring
-    , base64-bytestring
+    , base64 >= 2.0
     , bytestring
     , cereal
     , containers
@@ -139,7 +139,7 @@ library pact-crypto
     , deepseq
     , vector
     , text
-    , base64-bytestring
+    , base64 >= 2.0
     , bytestring
     , hashes >= 0.3
     , safe-exceptions
