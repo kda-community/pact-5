@@ -16,19 +16,19 @@ import Pact.Crypto.SlhDsa.Utils
 -- FIPS - 205 §11 - Parameter Sets
 -------------------------------------------------------------------------------
 
-data Parameter = Parameter { n:: Int
-                           , h:: Int
-                           , d:: Int
-                           , h':: Int
-                           , a:: Int
-                           , k:: Int
-                           , m:: Int
-                           , toSeed:: PublickKey -> PublicKeySeed
-                           , toRoot:: PublickKey -> PublicKeyRoot
-                           , fips205Hmsg:: ShortByteString -> PublickKey -> Message                         -> MessageDigest
-                           , fips205F::    PublicKeySeed   -> Address -> ShortByteString                    -> ShortByteString
-                           , fips205H::    PublicKeySeed   -> Address -> ShortByteString -> ShortByteString -> ShortByteString
-                           , fips205Tl::   PublicKeySeed   -> Address -> [ShortByteString]                  -> ShortByteString
+data Parameter = Parameter { n  :: !Int
+                           , h  :: !Int
+                           , d  :: !Int
+                           , h' :: !Int
+                           , a  :: !Int
+                           , k  :: !Int
+                           , m  :: !Int
+                           , toSeed :: !(PublickKey -> PublicKeySeed)
+                           , toRoot :: !(PublickKey -> PublicKeyRoot)
+                           , fips205Hmsg :: !(ShortByteString -> PublickKey -> Message                         -> MessageDigest)
+                           , fips205F    :: !(PublicKeySeed   -> Address -> ShortByteString                    -> ShortByteString)
+                           , fips205H    :: !(PublicKeySeed   -> Address -> ShortByteString -> ShortByteString -> ShortByteString)
+                           , fips205Tl   :: !(PublicKeySeed   -> Address -> [ShortByteString]                  -> ShortByteString)
                            }
 
 slh_dsa_sha2_128s :: Parameter
