@@ -149,7 +149,7 @@ data CEKEnv (e :: RuntimeMode) (b :: K.Type) (i :: K.Type)
 
 instance (NFData b, NFData i) => NFData (CEKEnv e b i)
 
-instance (Show i, Show b) => Show (CEKEnv e b i) where
+instance Show (CEKEnv e b i) where
   show (CEKEnv e _ _ _ _ _) = show e
 
 -- | List of builtins
@@ -555,7 +555,7 @@ instance (NFData b, NFData i) => NFData (CEKErrorHandler e b i)
 --   CEKEvalResult e CEKBigStep b i = EvalResult e CEKBigStep b i
 --   CEKEvalResult e CEKSmallStep b i = CEKReturn e b i
 
-instance (Show i, Show b) => Show (NativeFn e b i) where
+instance (Show b) => Show (NativeFn e b i) where
   show (NativeFn b _ _ arity _) = unwords
     ["(NativeFn"
     , show b
@@ -564,7 +564,7 @@ instance (Show i, Show b) => Show (NativeFn e b i) where
     , ")"
     ]
 
-instance (Show i, Show b) => Show (PartialNativeFn e b i) where
+instance (Show b) => Show (PartialNativeFn e b i) where
   show (PartialNativeFn b _ _ arity _ _) = unwords
     ["(NativeFn"
     , show b
@@ -573,10 +573,10 @@ instance (Show i, Show b) => Show (PartialNativeFn e b i) where
     , ")"
     ]
 
-instance (Pretty b, Show i, Show b) => Pretty (NativeFn e b i) where
+instance (Show b) => Pretty (NativeFn e b i) where
   pretty = pretty . show
 
-instance (Show i, Show b, Pretty b) => Pretty (CEKValue e b i) where
+instance Pretty (CEKValue e b i) where
   pretty = \case
     VPactValue pv -> pretty pv
     VClosure{} ->
