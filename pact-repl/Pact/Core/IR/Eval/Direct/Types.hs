@@ -181,7 +181,7 @@ data CanApply (e :: RuntimeMode) (b :: K.Type) (i :: K.Type)
   deriving (Show, Generic)
 
 
-instance (Show i, Show b) => Show (NativeFn e b i) where
+instance (Show b) => Show (NativeFn e b i) where
   show (NativeFn b _ _ arity _) = unwords
     ["(NativeFn"
     , show b
@@ -190,7 +190,7 @@ instance (Show i, Show b) => Show (NativeFn e b i) where
     , ")"
     ]
 
-instance (Show i, Show b) => Show (PartialNativeFn e b i) where
+instance (Show b) => Show (PartialNativeFn e b i) where
   show (PartialNativeFn b _ _ arity _ _) = unwords
     ["(NativeFn"
     , show b
@@ -230,7 +230,7 @@ data DirectEnv e b i
 instance (NFData b, NFData i) => NFData (DirectEnv e b i)
 
 
-instance (Show i, Show b) => Show (DirectEnv e b i) where
+instance Show (DirectEnv e b i) where
   show (DirectEnv e _ _ _ _ _) = show e
 
 type NativeFunction (e :: RuntimeMode) (b :: K.Type) (i :: K.Type)

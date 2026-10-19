@@ -1,4 +1,4 @@
-cabal-version:       3.8
+cabal-version:       3.16
 name:                pact-tng
 version:             5.4.1
 -- ^ 4 digit is prerelease, 3- or 2-digit for prod release
@@ -55,7 +55,7 @@ common pact-common
   build-depends:
     , Decimal
     , attoparsec
-    , base
+    , base >= 4.22
     , base16-bytestring
     , base64-bytestring
     , bytestring
@@ -106,7 +106,6 @@ common pact-common
     -- hyperlane deps
     , binary
     , wide-word
-    , ethereum
     , template-haskell
     , pact-tng:unsafe
     , hashes >= 0.3
@@ -144,7 +143,8 @@ library pact-crypto
     , text
     , base64-bytestring
     , bytestring
-    , hashes >= 0.3
+    , ram >=0.2.2
+    , crypton
     , safe-exceptions
     , deepseq
 
@@ -169,8 +169,8 @@ library pact-request-api
     , pact-tng:pact-crypto
     , yaml
     , lrucaching
-    , servant-server
-    , servant
+    , servant-server >= 0.20.3
+    , servant >= 0.20.3
     , warp
     , wai-cors
     , wai-logger
@@ -581,9 +581,9 @@ test-suite core-tests
     , safe-exceptions
     , http-conduit
     , direct-sqlite
-    , servant
-    , servant-server
-    , servant-client
+    , servant >= 0.20.3
+    , servant-server >= 0.20.3
+    , servant-client >= 0.20.3
     , lrucaching
     , http-client
     , warp
@@ -593,7 +593,6 @@ test-suite core-tests
     , wai-logger
     , fast-logger
     , property-matchers
-    , hashes >= 0.3
 
   other-modules:
     , Pact.Core.Test.CommandTests
