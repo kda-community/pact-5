@@ -44,6 +44,7 @@ import Data.ByteString (ByteString)
 import Data.Foldable
 import Data.Hashable
 import Data.Maybe (isJust)
+import Data.String
 import Data.Text(Text)
 import GHC.Generics
 import Text.Parser.Token as P
@@ -65,7 +66,7 @@ import qualified Pact.Crypto.WebAuthn.Cose.SignAlg as WA
 
 newtype PublicKeyText = PublicKeyText { _pubKey :: Text }
   deriving (Eq,Ord,Show)
-  deriving newtype (NFData, Serialise)
+  deriving newtype (NFData, Serialise, IsString)
 
 instance Pretty PublicKeyText where
   pretty (PublicKeyText t) = pretty t
