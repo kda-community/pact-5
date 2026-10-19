@@ -326,16 +326,16 @@ instance Pretty tyname => Pretty (TypeApp tyname) where
       "@ref" <> Pretty.braces (pretty r)
 
 
-instance (Pretty name, Pretty ty, Pretty b) => Pretty (Defun name ty b i) where
+instance (Pretty ty) => Pretty (Defun name ty b i) where
   pretty (Defun name _args ty _term _) =
     parens $ "defun" <+> pretty name <> ":" <> pretty ty
 
-instance (Pretty name, Pretty ty, Pretty b) => Pretty (DefPact name ty b i) where
+instance Pretty (DefPact name ty b i) where
   pretty (DefPact name _args tys _steps _info) =
     let dpTypes = vsep [ "step" <+> pretty stepIx <+> "type:" <+> pretty ty | (stepIx, ty) <- IM.toList tys]
     in "defpact" <+> pretty name <+> line <+> dpTypes
 
-instance (Pretty name, Pretty ty, Pretty b) => Pretty (DefCap name ty b i) where
+instance (Pretty ty) => Pretty (DefCap name ty b i) where
   pretty (DefCap name _args ty _ _ _) =
       parens $ "defcap" <+> pretty name <> ":" <> pretty ty
 
@@ -358,7 +358,7 @@ instance Pretty (DefConst i) where
   pretty (DefConst n ty v _) =
     parens $ "defconst" <+> pretty n <> ":" <> pretty ty <+> pretty v
 
-instance (Pretty name, Pretty ty, Pretty b) => Pretty (Def name ty b i) where
+instance (Pretty ty) => Pretty (Def name ty b i) where
   pretty = \case
     Dfun d -> pretty d
     DConst d -> pretty d

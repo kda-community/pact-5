@@ -951,12 +951,8 @@ instance Pretty EvalError where
     EntityNotAllowedInDefPact qn ->
       "Pact 5 does not support entity expressions in defpact" <+> pretty qn <> ". Please ensure your defpact steps have the correct number of expressions"
     Keccak256Error err -> case err of
-      Keccak256OpenSslException msg ->
-        "OpenSSL error when keccak256 hashing:" <> pretty (T.pack msg)
       Keccak256Base64Exception msg ->
         "Base64URL decode failed:" <+> pretty (T.pack msg)
-      Keccak256OtherException msg ->
-        "Exception when keccak256 hashing:" <+> pretty (T.pack msg)
     TypecheckingFailure mn t ->
       "static typechecking failed for" <+> pretty mn <> hardline <> pretty t
 
@@ -1658,12 +1654,8 @@ evalErrorToBoundedText = mkBoundedText . \case
     thsep ["Keccak256 Hashing failure:", failure]
     where
     failure = case err of
-      Keccak256OpenSslException _msg ->
-        "OpenSSL error"
       Keccak256Base64Exception _msg ->
         "Base64URL decode failed"
-      Keccak256OtherException _ ->
-        "Unknown exception thrown during computation of keccak256"
   TypecheckingFailure mn t ->
     thsep ["static typechecking failed for"
           , renderModuleName mn

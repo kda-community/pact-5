@@ -26,6 +26,7 @@ module Pact.Core.Trans.MPFR
   ) where
 
 import Control.Exception
+import Control.Monad (void)
 import Data.Decimal (Decimal)
 import Data.Int
 import Data.Word
@@ -125,7 +126,7 @@ foreign import ccall "__gmpq_clear"
   c'mpq_clear :: Mpq_t -> IO ()
 
 foreign import ccall "__gmpq_set_str"
-  c'mpq_set_str :: Mpq_t -> Ptr CChar -> CInt -> IO ()
+  c'mpq_set_str :: Mpq_t -> Ptr CChar -> CInt -> IO CInt
 
 foreign import ccall "__gmpq_get_str"
   c'mpq_get_str :: Ptr CChar -> CInt -> Mpq_t -> IO (Ptr CChar)
@@ -137,25 +138,25 @@ foreign import ccall "mpfr_clear"
   c'mpfr_clear :: Mpfr_t -> IO ()
 
 foreign import ccall "mpfr_set_q"
-  c'mpfr_set_q :: Mpfr_t -> Mpq_t -> CInt -> IO ()
+  c'mpfr_set_q :: Mpfr_t -> Mpq_t -> CInt -> IO CInt
 
 foreign import ccall "mpfr_get_q"
   c'mpfr_get_q :: Mpq_t -> Mpfr_t -> IO ()
 
 foreign import ccall "mpfr_div"
-  c'mpfr_div :: Mpfr_t -> Mpfr_t -> Mpfr_t -> CInt -> IO ()
+  c'mpfr_div :: Mpfr_t -> Mpfr_t -> Mpfr_t -> CInt -> IO CInt
 
 foreign import ccall "mpfr_pow"
-  c'mpfr_pow :: Mpfr_t -> Mpfr_t -> Mpfr_t -> CInt -> IO ()
+  c'mpfr_pow :: Mpfr_t -> Mpfr_t -> Mpfr_t -> CInt -> IO CInt
 
 foreign import ccall "mpfr_log"
-  c'mpfr_log :: Mpfr_t -> Mpfr_t -> CInt -> IO ()
+  c'mpfr_log :: Mpfr_t -> Mpfr_t -> CInt -> IO CInt
 
 foreign import ccall "mpfr_exp"
-  c'mpfr_exp :: Mpfr_t -> Mpfr_t -> CInt -> IO ()
+  c'mpfr_exp :: Mpfr_t -> Mpfr_t -> CInt -> IO CInt
 
 foreign import ccall "mpfr_sqrt"
-  c'mpfr_sqrt :: Mpfr_t -> Mpfr_t -> CInt -> IO ()
+  c'mpfr_sqrt :: Mpfr_t -> Mpfr_t -> CInt -> IO CInt
 
 foreign import ccall "mpfr_number_p"
   c'mpfr_number_p :: Mpfr_t -> IO CInt
@@ -182,8 +183,8 @@ mpfr_log :: Decimal -> Decimal -> TransResult Decimal
 mpfr_log = mpfr_arity2 $ \z' x' y' rnd ->
   withTemp $ \x'' ->
   withTemp $ \y'' -> do
-    c'mpfr_log x'' x' rnd
-    c'mpfr_log y'' y' rnd
+    void $ c'mpfr_log x'' x' rnd
+    void $ c'mpfr_log y'' y' rnd
     c'mpfr_div z' y'' x'' rnd
 
 mpfr_pow :: Decimal -> Decimal -> TransResult Decimal
@@ -205,8 +206,8 @@ dec2Mpfr d k =
   withCString (show (numerator r) ++ "/" ++ show (denominator r)) $ \r' ->
   withTempq $ \q ->
   withTemp $ \x -> do
-    c'mpq_set_str q r' 10
-    c'mpfr_set_q x q rounding
+    void $ c'mpq_set_str q r' 10
+    void $ c'mpfr_set_q x q rounding
     k x
   where
   r = toRational d
@@ -241,11 +242,11 @@ mpfr2Dec m =
     go s = s
 
 mpfr_arity1
-  :: (Mpfr_t -> Mpfr_t -> CInt -> IO ()) -> Decimal -> TransResult Decimal
+  :: (Mpfr_t -> Mpfr_t -> CInt -> IO CInt) -> Decimal -> TransResult Decimal
 mpfr_arity1 f x = unsafePerformIO $
   dec2Mpfr x $ \x' ->
   withTemp $ \y' -> do
-    f y' x' rounding
+    void $ f y' x' rounding
     checkOutput y'
 
 checkOutput :: Mpfr_t -> IO (TransResult Decimal)
@@ -270,11 +271,11 @@ checkOutput result = do
 
 
 mpfr_arity2
-  :: (Mpfr_t -> Mpfr_t -> Mpfr_t -> CInt -> IO ())
+  :: (Mpfr_t -> Mpfr_t -> Mpfr_t -> CInt -> IO CInt)
   -> Decimal -> Decimal -> TransResult Decimal
 mpfr_arity2 f x y = unsafePerformIO $
   dec2Mpfr x $ \x' ->
   dec2Mpfr y $ \y' ->
   withTemp $ \z' -> do
-    f z' x' y' rounding
+    void $ f z' x' y' rounding
     checkOutput z'

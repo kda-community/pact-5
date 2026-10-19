@@ -289,7 +289,7 @@ instance NFData (TableSchema name) where
   rnf (DesugaredTable pn) = rnf pn
   rnf (ResolvedTable sc) = rnf sc
 
-instance Eq name => Eq (TableSchema name) where
+instance Eq (TableSchema name) where
   (DesugaredTable a) == (DesugaredTable b) = a == b
   (ResolvedTable a) == (ResolvedTable b) = a == b
 

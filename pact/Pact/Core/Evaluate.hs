@@ -190,8 +190,11 @@ setupEvalEnv pdb mode msgData mCont gasEnv np spv pd efs = do
   contToPactStep (Cont pid step rb _) = DefPactStep step rb pid Nothing
   mkMsgSigs ss = M.fromList $ map toPair ss
     where
-    toPair (Signer _scheme pubK addr capList) =
-      (PublicKeyText (fromMaybe pubK addr),S.fromList (_sigCapability <$> capList))
+      toPair (Signer _scheme pubK addr capList) = (signerpubKey ,S.fromList (_sigCapability <$> capList))
+        where
+          signerpubKey | S.member FlagDisablePact54Fix efs = PublicKeyText $ fromMaybe pubK addr
+                       | otherwise = PublicKeyText pubK
+
   mkMsgVerifiers vs = M.fromListWith S.union $ map toPair vs
     where
     toPair (Verifier vfn _ caps) = (vfn, S.fromList (_sigCapability <$> caps))

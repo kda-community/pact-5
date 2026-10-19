@@ -58,7 +58,7 @@ import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import qualified Data.List.NonEmpty as NE
 
-#ifdef WITH_TRACING
+#ifdef WITH_FUNCALL_TRACING
 import System.Clock
 #endif
 
@@ -1041,9 +1041,10 @@ composeCap
   -> DirectEnv e b i
   -> FQCapToken
   -> EvalM e b i (EvalValue e b i)
-composeCap info env origToken =
+composeCap info env origToken@(CapToken capFqn _)  =
   isCapInStack' origToken >>= \case
-    False ->
+    False -> do
+      unlessExecutionFlagSet FlagDisablePact54Fix $ guardForModuleCall info (_fqModule capFqn) $ pure ()
       evalCap info env origToken PopCapComposed NormalCapEval (Constant (LBool True) info)
     True ->
       return (VBool True)

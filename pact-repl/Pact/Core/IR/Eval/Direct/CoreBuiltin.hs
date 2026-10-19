@@ -40,7 +40,7 @@ import qualified GHC.Exts as Exts
 import qualified GHC.Integer.Logarithms as IntLog
 import qualified Data.List as L
 
-#ifdef WITH_TRACING
+#ifdef WITH_NATIVE_TRACING
 import System.Clock
 #endif
 
