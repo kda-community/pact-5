@@ -550,6 +550,7 @@ test-suite core-tests
     , hedgehog
     , base16-bytestring
     , filepath
+    , hashes
     , lens
     , mtl
     , text
