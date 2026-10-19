@@ -51,20 +51,4 @@ source-repository-package
 allow-newer: http-media:containers
 allow-newer: tasty-wai:*
 
-
--- To be removed when Servant release an official enabled 9.14 version
-allow-newer: servant-server:*
-allow-newer: servant:*
-allow-newer: servant-client:*
-allow-newer: servant-client-core:*
-
--- To be removed when CBORG release an official enabled 9.14 version
-allow-newer: serialise:base,
-allow-newer: serialise:containers
-allow-newer: cborg:base
-allow-newer: cborg:containers
-
--- To be removed when Ordered-containers release an official enabled 9.14 version
-allow-newer: ordered-containers:containers
-
 tests: True
