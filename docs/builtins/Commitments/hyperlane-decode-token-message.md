@@ -2,6 +2,9 @@
 
 Use `hyperlane-decode-token-message` to decode a base-64-unpadded encoded Hyperlane Token Message into an object containing recipient, amount, and chainId information.
 
+This token message format is proprietry to Kadena and different from the standard Hyperlane token packing.
+For reference: (see [EVM Implementation](https://github.com/kinesis-bridge/smart-contracts/blob/main/typescript/contracts/TokenMessage.sol) )
+
 ### Basic syntax
 
 To decode a Hyperlane Token Message using `hyperlane-decode-token-message`, use the following syntax:
