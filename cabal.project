@@ -63,6 +63,7 @@ source-repository-package
 
 constraints:
     base64 +simd
+  , base16 +simd
 
 allow-newer: http-media:containers
 allow-newer: tasty-wai:*

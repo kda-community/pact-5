@@ -29,10 +29,10 @@ import qualified Crypto.PubKey.ECC.Prim as ECC
 import qualified Crypto.PubKey.ECC.Types as ECC
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteString as BS
+import qualified Data.Base16.Types as Base16
 import qualified Data.ByteString.Base16 as Base16
 import Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 import GHC.Generics (Generic)
 
 -- | [(spec)](https://www.w3.org/TR/webauthn-2/#credentialpublickey)
@@ -141,7 +141,7 @@ checkPublicKey key@PublicKeyEdDSA {..}
           <> " bytes, it has "
           <> Text.pack (show actualSize)
           <> " bytes instead: "
-          <> Text.decodeUtf8 (Base16.encode eddsaX)
+          <> (Base16.extractBase16 $ Base16.encodeBase16 eddsaX)
   where
     actualSize = BS.length eddsaX
     expectedSize = coordinateSizeEdDSA eddsaCurve

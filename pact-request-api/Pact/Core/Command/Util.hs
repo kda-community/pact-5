@@ -36,6 +36,7 @@ import Data.Aeson.Types
 import GHC.Generics
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
+import qualified Data.Base16.Types as B16
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 import Data.Hashable (Hashable)
@@ -69,7 +70,7 @@ parseB16JSON = withText "Base16" parseB16Text
 {-# INLINE parseB16JSON #-}
 
 parseB16Text :: Text -> Parser ByteString
-parseB16Text t = case B16.decode (encodeUtf8 t) of
+parseB16Text t = case B16.decodeBase16Untyped (encodeUtf8 t) of
   Right bs -> return bs
   Left _ -> fail $ "Base16 decode failed: " ++ show t
 {-# INLINE parseB16Text #-}
@@ -78,7 +79,7 @@ parseB16TextOnly :: Text -> Either String ByteString
 parseB16TextOnly t = resultToEither $ parse parseB16Text t
 
 toB16Text :: ByteString -> Text
-toB16Text s = decodeUtf8 $ B16.encode s
+toB16Text = B16.extractBase16 .  B16.encodeBase16
 
 -- | Utility for GHCI output of JSON
 outputJSON :: J.Encode a => a -> IO ()
