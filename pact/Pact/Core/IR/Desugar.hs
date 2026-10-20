@@ -293,7 +293,7 @@ specialFormToText = \case
   SFIf -> Just "if"
   SFEnforce -> Just "enforce"
   SFWithCapability -> Just "with-capability"
-  -- Intentionnaly we hide suspend.
+  -- Intentionally we hide suspend.
   --SFSuspend -> Just "suspend"
   SFDo -> Just "do"
   SFEnforceOne -> Just "enforce-one"
