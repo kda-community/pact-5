@@ -1,8 +1,8 @@
 ## error
 
-Use `error` to trigger unconditionnaly a transaction failure.
+Use `error` to trigger unconditionally a transaction failure.
 
-Roughly equialent to ``(enforce false message)``.
+Roughly equivalent to ``(enforce false message)``.
 
 ### Basic syntax
 
@@ -33,7 +33,7 @@ pact> (error "We are always wrong")
 (interactive):1:0: We are always wrong
 ```
 
-The folowing exemple defines the following function using ``cond`` and ``error``:
+The following example defines the following function using ``cond`` and ``error``:
 
 ```
 y
