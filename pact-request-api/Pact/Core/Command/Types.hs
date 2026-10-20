@@ -217,9 +217,9 @@ verifyUserSig msg sig Signer{..} = do
       for_ _siAddress $ \addr -> do
         unless (_siPubKey == addr) $ Left "address does not match pubkey"
       pk <- over _Left ("failed to parse ed25519 pubkey: " <>) $
-        parseEd25519PubKey =<< B16.decode (Text.encodeUtf8 _siPubKey)
+        parseEd25519PubKey =<< decodeB16 _siPubKey
       edSigParsed <- over _Left ("failed to parse ed25519 signature: " <>) $
-        parseEd25519Signature =<< B16.decode (Text.encodeUtf8 edSig)
+        parseEd25519Signature =<< decodeB16 edSig
       verifyEd25519Sig msg pk edSigParsed
 
     (PlainSig slhSig, SlhDsaSha128s) -> SLHDSA.verifySig SlhDsaSha128s _siPubKey slhSig msg
@@ -235,7 +235,7 @@ verifyUserSig msg sig Signer{..} = do
       -- we can't use parseWebAuthnPublicKeyText here because keys in the
       -- signers list might be unprefixed due to old webauthn.
       pk <- over _Left ("failed to parse webauthn pubkey: " <>) $
-        parseWebAuthnPublicKey =<< B16.decode (Text.encodeUtf8 strippedPrefix)
+        parseWebAuthnPublicKey =<< decodeB16 strippedPrefix
       verifyWebAuthnSig msg pk waSig
 
     _ ->
@@ -247,7 +247,9 @@ verifyUserSig msg sig Signer{..} = do
           PlainSig _ -> "ED25519"
           WebAuthnSig _ -> "WebAuthn"
         ]
-  where scheme = fromMaybe defPPKScheme _siScheme
+  where
+    scheme = fromMaybe defPPKScheme _siScheme
+    decodeB16 = first Text.unpack . B16.decodeBase16Untyped .Text.encodeUtf8
 
 
 

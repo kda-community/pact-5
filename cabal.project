@@ -61,6 +61,10 @@ source-repository-package
   tag: cedced1ae95083067f99b37c1e0f88400526f4d8
 
 
+constraints:
+    base64 +simd
+  , base16 +simd
+
 allow-newer: http-media:containers
 allow-newer: tasty-wai:*
 

@@ -84,6 +84,7 @@ import GHC.Generics
 import qualified Codec.Serialise as Serialise
 import Control.Applicative
 import Control.Lens
+import Data.Bifunctor (first)
 import Control.Monad (unless)
 import Control.Monad.Except
 import Control.Monad.IO.Class
@@ -94,6 +95,7 @@ import qualified Data.ASN1.Types as ASN1
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (fromShort)
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Base64.Types as Base64
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Base64.URL as Base64URL
 import Data.Proxy
@@ -204,12 +206,9 @@ verifyWebAuthnSig
     webAuthnPubKeyHasValidAlg publicKey
 
     -- Recover the signature, clientData, and authData bytestrings.
-    sig <- over _Left ("signature: " <>) $
-      Base64.decode (T.encodeUtf8 signature)
-    clientData <- over _Left ("clientData: " <>) $
-      Base64URL.decode (T.encodeUtf8 clientDataJSON)
-    authData <- over _Left ("authData: " <>) $
-      Base64.decode (T.encodeUtf8 authenticatorData)
+    sig <- over _Left ("signature: " <>) $ decodeB64 signature
+    clientData <- over _Left ("clientData: " <>) $ decodeB64URL clientDataJSON
+    authData <- over _Left ("authData: " <>) $ decodeB64 authenticatorData
 
     -- Reconstitute the payload signed by the WebAuthn client.
     let clientDataDigest = B.convert (H.hashWith H.SHA256 clientData)
@@ -227,6 +226,9 @@ verifyWebAuthnSig
     let pactHashText = PactHash.hashToText hsh
     unless (pactHashText == challenge) $
       Left "Hash mismatch, signature signs for the wrong transaction"
+  where
+      decodeB64    = first T.unpack . Base64.decodeBase64Untyped . T.encodeUtf8
+      decodeB64URL = first T.unpack . Base64URL.decodeBase64Untyped . T.encodeUtf8
 
 parseWebAuthnPublicKey :: ByteString -> Either String WebAuthnPublicKey
 parseWebAuthnPublicKey rawPk = do
@@ -301,10 +303,13 @@ signWebauthn pubkey privkey authData hsh = do
             ]
         _ -> throwError "invalid pubkey/privkey pair or invalid key type"
   return WebAuthnSignature
-    { signature = T.decodeUtf8 $ Base64.encode signature
-    , clientDataJSON = T.decodeUtf8 $ Base64URL.encode clientData
-    , authenticatorData = T.decodeUtf8 $ Base64.encode authData
+    { signature = encodeBase64 signature
+    , clientDataJSON = encodeBase64URL clientData
+    , authenticatorData = encodeBase64 authData
     }
+  where
+    encodeBase64 = Base64.extractBase64 . Base64.encodeBase64
+    encodeBase64URL = Base64.extractBase64 . Base64URL.encodeBase64
 
 generateEd25519KeyPair :: MonadRandom m => m Ed25519KeyPair
 generateEd25519KeyPair = do
