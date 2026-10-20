@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Pact.Crypto.SlhDsa.ChainwebSlhDsa
 (
   verifySig
@@ -13,8 +15,12 @@ import qualified Data.ByteString.Short as SB
 import qualified Data.Text as T
 import qualified Data.List as L
 import qualified Data.Text.Encoding as TE
-import qualified Data.ByteString.Base16 as B16
-import qualified Pact.Core.Crypto.Base64 as B64
+import Data.Base16.Types
+import Data.Base64.Types
+
+import Data.ByteString.Base64.URL
+import Data.ByteString.Base16
+
 import qualified Data.ASN1.BinaryEncoding as ASN1
 import qualified Data.ASN1.Encoding as ASN1
 import qualified Data.ASN1.Types as ASN1
@@ -57,10 +63,11 @@ oidFromhash txHash
 
 -- Main entry point for verifying signatures
 -- TODO Signature spec needs to be finalized
-verifySig :: PPKScheme -> T.Text -> T.Text -> Hash -> Either String ()
+verifySig :: PPKScheme -> Base16 T.Text -> Base64 'UrlUnpadded T.Text -> Hash -> Either String ()
 verifySig pactScheme pkey sig txHash = do
-    decodedPkey <- SB.toShort <$> (B16.decode $ TE.encodeUtf8 pkey)
-    decodedSig  <- B64.decodeBase64UrlUnpadded' $ TE.encodeUtf8 sig
     prm <- paramaterFromScheme pactScheme
     oid <- oidFromhash txHash
-    verifySignaturePreHashedWithContext prm chainwebContext oid decodedPkey decodedSig $ unHash txHash
+    verifySignaturePreHashedWithContext prm chainwebContext oid (decodeKey pkey) (decodeSig sig) $ unHash txHash
+    where
+      decodeKey = SB.toShort . decodeBase16'
+      decodeSig = decodeBase64 . fmap TE.encodeUtf8

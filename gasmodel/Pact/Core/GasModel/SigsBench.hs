@@ -14,6 +14,9 @@ import Control.DeepSeq
 import Pact.Core.Command.Types
 import qualified Data.ByteString.Short as SB
 import qualified Data.ByteString.Base16 as B16
+
+import qualified Data.ByteString.Base64.URL as B64URL
+import qualified Data.Base16.Types as B16
 import Pact.Core.Hash
 import System.Random
 import Data.IORef
@@ -57,10 +60,10 @@ setupSigs scheme goodSig = SigStore (V.unfoldrN 1000 buildSig $ mkStdGen rndSeed
 
     encodeSig:: ByteString -> UserSig
     encodeSig = case scheme of
-        ED25519 -> PlainSig . TE.decodeUtf8Lenient . B16.encode
-        SlhDsaSha128s -> PlainSig . toB64UrlUnpaddedText
-        SlhDsaSha192s -> PlainSig . toB64UrlUnpaddedText
-        SlhDsaSha256s -> PlainSig . toB64UrlUnpaddedText
+        ED25519 -> ED25519Sig . B16.encodeBase16
+        SlhDsaSha128s -> SLHDSASig . B64URL.encodeBase64Unpadded
+        SlhDsaSha192s -> SLHDSASig . B64URL.encodeBase64Unpadded
+        SlhDsaSha256s -> SLHDSASig . B64URL.encodeBase64Unpadded
         _ -> error "We only encode PlainSig"
 
     size = case scheme of
@@ -120,7 +123,7 @@ ed25519Key:: Signer
 ed25519Key = Signer (Just ED25519) "b663516a3b3d953adc773cab734877fd49175fe4dd4e1003208f994017b8297c" Nothing []
 
 ed25519KeyPair:: Ed25519KeyPair
-ed25519KeyPair = fromRight (error "InvalidKey") $ importEd25519KeyPair Nothing $ PrivBS $ B16.decodeLenient "013f25be7fede27344ff45271dbce4d4fc8f8d429daae44101558cdb0cad3d32"
+ed25519KeyPair = fromRight (error "InvalidKey") $ importEd25519KeyPair Nothing $ PrivBS $ B16.decodeBase16 $ B16.assertBase16  "013f25be7fede27344ff45271dbce4d4fc8f8d429daae44101558cdb0cad3d32"
 
 --- SLH BENCHMARKS
 
@@ -155,14 +158,14 @@ webAUthNAuthData:: ByteString
 webAUthNAuthData = TE.encodeUtf8 "Hello"
 
 webAuthnKeyEd25519:: WebAuthnPublicKey
-webAuthnKeyEd25519 = either (\e -> error e) id $ parseWebAuthnPublicKey $ B16.decodeLenient "a4010103272006215820b663516a3b3d953adc773cab734877fd49175fe4dd4e1003208f994017b8297c"
+webAuthnKeyEd25519 = either (\e -> error e) id $ parseWebAuthnPublicKey $ B16.decodeBase16 $ B16.assertBase16 "a4010103272006215820b663516a3b3d953adc773cab734877fd49175fe4dd4e1003208f994017b8297c"
 
 webAuthnKeyEd25519Signer:: Signer
 webAuthnKeyEd25519Signer = Signer (Just WebAuthn) "WEBAUTHN-a4010103272006215820b663516a3b3d953adc773cab734877fd49175fe4dd4e1003208f994017b8297c" Nothing []
 
 
 webAuthnKeyEd25519Priv:: WebauthnPrivateKey
-webAuthnKeyEd25519Priv = either (\e -> error e) id $ parseWebAuthnPrivateKey $ B16.decodeLenient "013f25be7fede27344ff45271dbce4d4fc8f8d429daae44101558cdb0cad3d32"
+webAuthnKeyEd25519Priv = either (\e -> error e) id $ parseWebAuthnPrivateKey $ B16.decodeBase16 $ B16.assertBase16 "013f25be7fede27344ff45271dbce4d4fc8f8d429daae44101558cdb0cad3d32"
 
 
 unsafSignWebAuthnEcDSA :: Hash -> WebAuthnSignature
@@ -170,10 +173,10 @@ unsafSignWebAuthnEcDSA h = (either (\e -> error e) id . unsafePerformIO . runExc
                              $ signWebauthn webAuthnKeyEcDSA webAuthnKeyEcDSAPriv webAUthNAuthData h
 
 webAuthnKeyEcDSA:: WebAuthnPublicKey
-webAuthnKeyEcDSA = either (\e -> error e) id $ parseWebAuthnPublicKey $ B16.decodeLenient "a5010203262001215820b9562381f3cec93438700661665fb8a59d8f5c1eaf77244b076dc5ee9b30fa22225820370cdc83b75b44d0010c9f31c8d94e9bcbcde285e727bde1c43fb65461e9b6ce"
+webAuthnKeyEcDSA = either (\e -> error e) id $ parseWebAuthnPublicKey $ B16.decodeBase16 $ B16.assertBase16 "a5010203262001215820b9562381f3cec93438700661665fb8a59d8f5c1eaf77244b076dc5ee9b30fa22225820370cdc83b75b44d0010c9f31c8d94e9bcbcde285e727bde1c43fb65461e9b6ce"
 
 webAuthnKeyEcDSASigner:: Signer
 webAuthnKeyEcDSASigner = Signer (Just WebAuthn) "WEBAUTHN-a5010203262001215820b9562381f3cec93438700661665fb8a59d8f5c1eaf77244b076dc5ee9b30fa22225820370cdc83b75b44d0010c9f31c8d94e9bcbcde285e727bde1c43fb65461e9b6ce" Nothing []
 
 webAuthnKeyEcDSAPriv:: WebauthnPrivateKey
-webAuthnKeyEcDSAPriv = either (\e -> error e) id $ WebAuthnP256PrivateKey <$> (parseECDSAP256PrivateKey $ B16.decodeLenient "b8858d0e7ec63d385e7912cee6b9d37ab9945b9875c1f37fcc0bdd56d817994a")
+webAuthnKeyEcDSAPriv = either (\e -> error e) id $ WebAuthnP256PrivateKey <$> (parseECDSAP256PrivateKey $ B16.decodeBase16 $ B16.assertBase16  "b8858d0e7ec63d385e7912cee6b9d37ab9945b9875c1f37fcc0bdd56d817994a")

@@ -549,6 +549,7 @@ test-suite core-tests
     , exceptions
     , hedgehog
     , base16 >= 2.0
+    , base64 >= 2.0
     , filepath
     , hashes
     , lens

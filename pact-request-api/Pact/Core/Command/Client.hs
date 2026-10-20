@@ -59,6 +59,8 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Pact.Time
 import Pact.JSON.Yaml
 import System.FilePath
+
+import Data.Base16.Types
 import qualified Pact.JSON.Encode as J
 import qualified Pact.JSON.Decode as JD
 import qualified Data.Yaml as Y
@@ -354,7 +356,7 @@ loadSigData fp = do
 
 addSigToSigData :: Ed25519KeyPair -> SigData a -> IO (SigData a)
 addSigToSigData kp sd = do
-  let sig = PlainSig $ signHash (_sigDataHash sd) kp
+  let sig = ED25519Sig $ signHash (_sigDataHash sd) kp
   let k = PublicKeyHex $ toB16Text $ getPublic kp
   return $ sd { _sigDataSigs = addSigToList k sig $ _sigDataSigs sd }
 
@@ -409,8 +411,8 @@ returnSigDataOrCommand  outputLocal sd
     sigs' <- foldrM toVerifPair [] sigs
     traverse_ Left $ verifyUserSigs h sigs'
     where
-    toVerifPair (PublicKeyHex pktext, Just (PlainSig _usSig) ) m = do
-      let sig = PlainSig _usSig
+    toVerifPair (PublicKeyHex pktext, Just (ED25519Sig _usSig) ) m = do
+      let sig = ED25519Sig _usSig
       let signer = Signer (Just ED25519) pktext Nothing []
       pure $ (sig, signer):m
     toVerifPair (_, _) m = pure m
@@ -527,7 +529,7 @@ signCmd keyFiles bs = do
       kps <- mapM importKeyFile keyFiles
       fmap (encodeYaml . J.Object) $ forM kps $ \kp -> do
             let sig = signHash (Hash $ SBS.toShort h) kp
-            return ((toB16Text . _b16JsonBytes) (B16JsonBytes (getPublic kp)), sig)
+            return ((toB16Text . _b16JsonBytes) (B16JsonBytes (getPublic kp)), extractBase16 sig)
 
 withKeypairsOrSigner
   :: Bool
@@ -788,9 +790,9 @@ keyPairToSigner cred caps = Signer scheme pub addr caps
 keyPairsToSigners :: [Ed25519KeyPairCaps] -> [Signer]
 keyPairsToSigners creds = map (uncurry keyPairToSigner) creds
 
-signHash :: PactHash.Hash -> Ed25519KeyPair -> Text
+signHash :: PactHash.Hash -> Ed25519KeyPair -> Base16 Text
 signHash hsh (pub,priv) =
-  toB16Text $ exportEd25519Signature $ signEd25519 pub priv hsh
+  exportEd25519Signature' $ signEd25519 pub priv hsh
 
 -- | Make a Command without signing it. This is used in Chainweb's Rosetta Utils.
 mkUnsignedCommand
@@ -812,7 +814,7 @@ mkUnsignedCommand signers vers meta nonce nid rpc = mkCommand' [] encodedPayload
 mkCommand' :: [(Ed25519KeyPair ,a)] -> ByteString -> IO (Command ByteString)
 mkCommand' creds env = do
   let hsh = PactHash.hash env   -- hash associated with a Command, aka a Command's Request Key
-      toUserSig (cred,_) = PlainSig $ signHash hsh cred
+      toUserSig (cred,_) = ED25519Sig $ signHash hsh cred
   let sigs = toUserSig <$> creds
   return $ Command env sigs hsh
 
@@ -830,7 +832,7 @@ mkCommandWithDynKeys' creds env = do
     toUserSig :: PactHash.Hash -> (DynKeyPair, a) -> IO UserSig
     toUserSig hsh = \case
       (DynEd25519KeyPair (pub, priv), _) ->
-        pure $ PlainSig $ signHash hsh (pub, priv)
+        pure $ ED25519Sig $ signHash hsh (pub, priv)
       (DynWebAuthnKeyPair _ pubWebAuthn privWebAuthn, _) -> do
         signResult <- runExceptT $ signWebauthn pubWebAuthn privWebAuthn "" hsh
         case signResult of

@@ -33,9 +33,12 @@ module Pact.Core.Command.Crypto
 
   -- * Introduce an Ed25519 or WebAuthn key from raw bytes.
   , parseEd25519PubKey
+  , parseEd25519PubKey'
   , parseEd25519SecretKey
   , parseEd25519Signature
+  , parseEd25519Signature'
   , parseWebAuthnPublicKey
+  , parseWebAuthnPublicKey'
   , parseWebAuthnPrivateKey
   , parseECDSAP256PrivateKey
   , parseWebAuthnSignature
@@ -55,6 +58,7 @@ module Pact.Core.Command.Crypto
 
   -- * Convert an Ed25519 or WebAuthn signature into raw bytes.
   , exportEd25519Signature
+  , exportEd25519Signature'
   , exportWebAuthnSignature
 
 
@@ -85,7 +89,7 @@ import qualified Codec.Serialise as Serialise
 import Control.Applicative
 import Control.Lens
 import Data.Bifunctor (first)
-import Control.Monad (unless)
+import Control.Monad (unless, guard)
 import Control.Monad.Except
 import Control.Monad.IO.Class
 import qualified Crypto.Hash as H
@@ -95,7 +99,14 @@ import qualified Data.ASN1.Types as ASN1
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (fromShort)
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Base64.Types as Base64
+
+import qualified Data.Text.Encoding.Base16 as B16T
+import qualified Data.ByteString.Base16 as B16
+
+import Data.Base16.Types
+import Data.Base64.Types
+
+
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Base64.URL as Base64URL
 import Data.Proxy
@@ -126,37 +137,49 @@ import Crypto.Random.Types
 
 import qualified Pact.JSON.Encode as J
 
--- | The type of parsed signatures
--- It's proabbly better to not guess the signature type betwenn ED25519 and SLH-DSA at parsing time
--- But let verifyUserSig (which has the scheme information) to validate.
--- A PlainSig is just a basic text signature: Either a hex EDD25519 or a Base64 SLH-DSA
-data UserSig = PlainSig T.Text
-             | WebAuthnSig WebAuthnSignature
-  deriving (Eq, Ord, Show, Generic)
+data UserSig =
+    ED25519Sig (Base16 T.Text)
+  | SLHDSASig  (Base64 'UrlUnpadded T.Text)
+  | WebAuthnSig WebAuthnSignature
+  deriving (Eq, Show, Generic)
 
 instance NFData UserSig
 
 instance J.Encode UserSig where
-  build (PlainSig s) =
-    J.object [ "sig" J..= s ]
+  build (ED25519Sig s) =
+    J.object [ "sig" J..= extractBase16 s ]
+  build (SLHDSASig s) =
+    J.object [ "sig" J..= extractBase64 s ]
   build (WebAuthnSig sig) = J.object
     [ "sig" J..= T.decodeUtf8 (BSL.toStrict $ J.encode sig) ]
   {-# INLINE build #-}
 
 instance A.FromJSON UserSig where
   parseJSON x =
-    parseWebAuthnStringified x <|>
-    parsePlainSig x
+    parseEddHexSig x <|> parseSlhBase64Sig x <|> parseWebAuthnStringified x <|> fail "Invalid Signature"
     where
+      -- WebAuthn case : try to parse as a JSON
       parseWebAuthnStringified = A.withObject "UserSig" $ \o -> do
         t <- o A..: "sig"
         case A.decode (BSL.fromStrict $ T.encodeUtf8 t) of
-          Nothing -> fail "Could not decode signature"
+          Nothing -> empty
           Just webauthnSig -> return $ WebAuthnSig webauthnSig
-      parsePlainSig = A.withObject "UserSig" $ \o -> do
-        t <- o A..: "sig"
-        return $ PlainSig t
 
+      -- EDD Case: try to parse as Hex
+      parseEddHexSig = A.withObject "UserSig" $ \o -> do
+        t <- o A..: "sig"
+        guard (T.length t == 128)
+        either (const empty) (return . ED25519Sig) $ B16T.parseBase16 t
+
+      -- SLH-DSA Case: Try to parse as Base64 Unpadded
+      parseSlhBase64Sig = A.withObject "UserSig" $ \o -> do
+        t <- o A..: "sig"
+        guard (T.length t `elem` [10475, 21632, 39723])
+        either (const empty) (return . SLHDSASig) $ parseBase64UnPadded t
+
+
+parseBase64UnPadded :: T.Text -> Either T.Text (Base64 'UrlUnpadded T.Text)
+parseBase64UnPadded t = assertBase64 t <$ Base64URL.decodeBase64UnpaddedUntyped (T.encodeUtf8 t)
 
 verifyEd25519Sig :: PactHash.Hash -> Ed25519.PublicKey -> Ed25519.Signature -> Either String ()
 verifyEd25519Sig (PactHash.Hash msg) pubKey sig =
@@ -172,6 +195,9 @@ parseEd25519PubKey s = E.onCryptoFailure
   Right
   (Ed25519.publicKey s)
 
+parseEd25519PubKey' :: Base16 T.Text ->  Either String Ed25519.PublicKey
+parseEd25519PubKey' = parseEd25519PubKey . B16.decodeBase16'
+
 exportEd25519SecretKey :: Ed25519.SecretKey -> ByteString
 exportEd25519SecretKey = B.convert
 
@@ -184,11 +210,17 @@ parseEd25519SecretKey s = E.onCryptoFailure
 exportEd25519Signature :: Ed25519.Signature -> ByteString
 exportEd25519Signature = B.convert
 
+exportEd25519Signature' :: Ed25519.Signature -> Base16 T.Text
+exportEd25519Signature' = B16.encodeBase16 . exportEd25519Signature
+
 parseEd25519Signature :: ByteString -> Either String Ed25519.Signature
 parseEd25519Signature s = E.onCryptoFailure
   (const $ Left ("Invalid ED25519 Signature: " ++ show (toB16Text s)))
   Right
   (Ed25519.signature s)
+
+parseEd25519Signature' :: Base16 T.Text -> Either String Ed25519.Signature
+parseEd25519Signature' = parseEd25519Signature . B16.decodeBase16'
 
 exportWebAuthnPrivateKey :: WebauthnPrivateKey -> ByteString
 exportWebAuthnPrivateKey = \case
@@ -236,6 +268,9 @@ parseWebAuthnPublicKey rawPk = do
     Serialise.deserialiseOrFail @WA.CosePublicKey (BSL.fromStrict rawPk)
   webAuthnPubKeyHasValidAlg pk
   return pk
+
+parseWebAuthnPublicKey' :: Base16 T.Text ->  Either String WebAuthnPublicKey
+parseWebAuthnPublicKey' = parseWebAuthnPublicKey . B16.decodeBase16'
 
 parseWebAuthnPrivateKey :: ByteString -> Either String WebauthnPrivateKey
 parseWebAuthnPrivateKey rawPk = case parseEd25519SecretKey rawPk of
@@ -308,8 +343,8 @@ signWebauthn pubkey privkey authData hsh = do
     , authenticatorData = encodeBase64 authData
     }
   where
-    encodeBase64 = Base64.extractBase64 . Base64.encodeBase64
-    encodeBase64URL = Base64.extractBase64 . Base64URL.encodeBase64
+    encodeBase64 = extractBase64 . Base64.encodeBase64
+    encodeBase64URL = extractBase64 . Base64URL.encodeBase64
 
 generateEd25519KeyPair :: MonadRandom m => m Ed25519KeyPair
 generateEd25519KeyPair = do
