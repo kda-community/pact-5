@@ -103,7 +103,7 @@ newtype Gas
   = Gas { _gas :: SatWord }
   deriving (Eq, Ord, Show)
   deriving (Semigroup, Monoid) via (Sum SatWord)
-  deriving (Enum) via SatWord
+  deriving (Enum, Bounded) via SatWord
   deriving newtype NFData
 
 makePrisms ''Gas

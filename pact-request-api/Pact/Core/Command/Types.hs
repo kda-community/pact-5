@@ -80,13 +80,12 @@ import Control.DeepSeq
 import Data.Aeson as A
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Base16 as B16
+import qualified Data.Text.Encoding.Base16 as B16T
 import Data.Foldable
 import Data.Hashable (Hashable)
 import Data.Serialize as SZ
 import Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 import Data.Maybe  (fromMaybe)
 
 import GHC.Generics
@@ -109,6 +108,7 @@ import Pact.Core.Command.Crypto  as Base
 import Pact.Core.Evaluate
 import Pact.Core.Info
 import Pact.Core.Errors
+import qualified Pact.Crypto.SlhDsa.ChainwebSlhDsa as SLHDSA
 
 import qualified Pact.JSON.Decode as JD
 import qualified Pact.JSON.Encode as J
@@ -127,7 +127,7 @@ data Command a = Command
   { _cmdPayload :: !a
   , _cmdSigs :: ![UserSig]
   , _cmdHash :: !PactHash.Hash
-  } deriving (Eq,Show,Ord,Generic,Functor,Foldable,Traversable)
+  } deriving (Eq,Show,Generic,Functor,Foldable,Traversable)
 
 instance (FromJSON a) => FromJSON (Command a) where
     parseJSON = withObject "Command" $ \o ->
@@ -210,24 +210,29 @@ verifyUserSigs hsh sigsAndSigners
 
 verifyUserSig :: PactHash.Hash -> UserSig -> Signer -> Either String ()
 verifyUserSig msg sig Signer{..} = do
+  -- PubKey is always a HexString (evantually prefixed in case of WEBAUTHN)
+  pubKey <- first Text.unpack $ B16T.parseBase16 $ stripWebAuthnPrefix _siPubKey
+
+  -- The caller is supposed to filter out not allowed schemes
   case (sig, scheme) of
     (ED25519Sig edSig, ED25519) -> do
       for_ _siAddress $ \addr -> do
         unless (_siPubKey == addr) $ Left "address does not match pubkey"
-      pk <- over _Left ("failed to parse ed25519 pubkey: " <>) $
-        parseEd25519PubKey =<< B16.decode (Text.encodeUtf8 _siPubKey)
-      edSigParsed <- over _Left ("failed to parse ed25519 signature: " <>) $
-        parseEd25519Signature =<< B16.decode (Text.encodeUtf8 edSig)
+
+      pk <- over _Left ("failed to parse ed25519 pubkey: " <>) $ parseEd25519PubKey' pubKey
+
+      edSigParsed <- over _Left ("failed to parse ed25519 signature: " <>) $ parseEd25519Signature' edSig
+
       verifyEd25519Sig msg pk edSigParsed
 
+    (SLHDSASig slhSig, SlhDsaSha128s) -> SLHDSA.verifySig SlhDsaSha128s pubKey slhSig msg
+
+    (SLHDSASig slhSig, SlhDsaSha192s) -> SLHDSA.verifySig SlhDsaSha192s pubKey slhSig msg
+
+    (SLHDSASig slhSig, SlhDsaSha256s) -> SLHDSA.verifySig SlhDsaSha256s pubKey slhSig msg
+
     (WebAuthnSig waSig, WebAuthn) -> do
-      let
-        strippedPrefix =
-          fromMaybe _siPubKey (Text.stripPrefix webAuthnPrefix _siPubKey)
-      -- we can't use parseWebAuthnPublicKeyText here because keys in the
-      -- signers list might be unprefixed due to old webauthn.
-      pk <- over _Left ("failed to parse webauthn pubkey: " <>) $
-        parseWebAuthnPublicKey =<< B16.decode (Text.encodeUtf8 strippedPrefix)
+      pk <- over _Left ("failed to parse webauthn pubkey: " <>) $ parseWebAuthnPublicKey' pubKey
       verifyWebAuthnSig msg pk waSig
 
     _ ->
@@ -235,11 +240,18 @@ verifyUserSig msg sig Signer{..} = do
         [ "scheme of"
         , show _siScheme
         , "does not match signature type"
-        , case sig of
-          ED25519Sig _ -> "ED25519"
-          WebAuthnSig _ -> "WebAuthn"
+        , userSigType
         ]
-  where scheme = fromMaybe defPPKScheme _siScheme
+  where
+    stripWebAuthnPrefix | scheme == WebAuthn =  \x -> fromMaybe x (Text.stripPrefix webAuthnPrefix x)
+                        | otherwise = id
+
+    scheme = fromMaybe defPPKScheme _siScheme
+
+    userSigType = case sig of
+                ED25519Sig _ -> "ED25519"
+                SLHDSASig _   -> "SLH-DSA"
+                WebAuthnSig _ -> "WebAuthn"
 
 
 

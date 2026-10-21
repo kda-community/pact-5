@@ -17,7 +17,11 @@ tests = testGroup "PrincipalTests"
   , rSpec
   , mSpec
   , uSpec
-  , pSpec ]
+  , pSpec
+  , qSpec128
+  , qSpec192
+  , qSpec256
+  , xSpec ]
 
 -- | Default info is sufficient for this spec
 --
@@ -37,7 +41,7 @@ kSpec =
         fmap showPrincipalType pk @?= Right (showPrincipalType k')
     k = "k:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68"
     k' = K (PublicKeyText "584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68")
-    pk = parseOnly principalParser k
+    pk = parseOnly (principalParser True) k
 
 wSpec :: TestTree
 wSpec =
@@ -52,7 +56,7 @@ wSpec =
         fmap showPrincipalType pw @?= Right (showPrincipalType w')
     w = "w:5PhRgNM3oePrkfAKhk9dYmjRqOhEEhbR2eyFz8HU_ew:keys-all"
     w' = W "5PhRgNM3oePrkfAKhk9dYmjRqOhEEhbR2eyFz8HU_ew" "keys-all"
-    pw = parseOnly principalParser w
+    pw = parseOnly (principalParser True) w
 
 rSpec :: TestTree
 rSpec =
@@ -67,7 +71,7 @@ rSpec =
         fmap showPrincipalType pr @?= Right (showPrincipalType r')
     r = "r:ks"
     r' = R (KeySetName "ks" Nothing)
-    pr = parseOnly principalParser r
+    pr = parseOnly (principalParser True) r
 
 mSpec :: TestTree
 mSpec =
@@ -82,7 +86,7 @@ mSpec =
         fmap showPrincipalType pm @?= Right (showPrincipalType m')
     m = "m:test-ns.tester:tester"
     m' = M (ModuleName "tester" (Just (NamespaceName "test-ns"))) "tester"
-    pm = parseOnly principalParser m
+    pm = parseOnly (principalParser True) m
 
 uSpec :: TestTree
 uSpec =
@@ -97,7 +101,7 @@ uSpec =
     u :: Text
     u = "u:test-ns.tester.both-guard:aqukm-5Jj6ITLeQfhNYydmtDccinqdJylD9CMlLKQDI"
     u' = U "test-ns.tester.both-guard" "aqukm-5Jj6ITLeQfhNYydmtDccinqdJylD9CMlLKQDI"
-    pu = parseOnly principalParser u
+    pu = parseOnly (principalParser True) u
 
 pSpec :: TestTree
 pSpec = testGroup "p:"
@@ -111,4 +115,73 @@ pSpec = testGroup "p:"
       fmap showPrincipalType pp @?= Right (showPrincipalType p')
     p = "p:DldRwCblQ7Loqy6wYJnaodHl30d3j3eH-qtFzfEv46g:pact-guard"
     p' = P (DefPactId "DldRwCblQ7Loqy6wYJnaodHl30d3j3eH-qtFzfEv46g") "pact-guard"
-    pp = parseOnly principalParser p
+    pp = parseOnly (principalParser True) p
+
+qSpec128 :: TestTree
+qSpec128 =
+  testGroup "q:128" [kRoundtrips, kCorrectIdents]
+  where
+    kRoundtrips =
+      testCase "q: parser roundtrips" $ do
+        -- principal -> text
+        pq @?= Right q'
+        -- text -> principal
+        mkPrincipalIdent q' @?= q
+    kCorrectIdents =
+      testCase "q: has correct identifiers" $
+        -- principal -> correct id
+        fmap showPrincipalType pq @?= Right (showPrincipalType q')
+    q = "q:ce46e14af2707dd21b6dc06b1e56cbf676ab222a443b0170075d581a90123c3e"
+    q' = Q (PublicKeyText "qce46e14af2707dd21b6dc06b1e56cbf676ab222a443b0170075d581a90123c3e")
+    pq = parseOnly (principalParser False) q
+
+qSpec192 :: TestTree
+qSpec192 =
+  testGroup "q:192" [kRoundtrips, kCorrectIdents]
+  where
+    kRoundtrips =
+      testCase "q: parser roundtrips" $ do
+        -- principal -> text
+        pq @?= Right q'
+        -- text -> principal
+        mkPrincipalIdent q' @?= q
+    kCorrectIdents =
+      testCase "q: has correct identifiers" $
+        -- principal -> correct id
+        fmap showPrincipalType pq @?= Right (showPrincipalType q')
+    q = "q:2037a79e494cf0e11a83cf1958610d5c3e382b2499f7bdd3987ebb97b7c6107fb75e9d453ab27f522b29f9d6a985e297"
+    q' = Q (PublicKeyText "q2037a79e494cf0e11a83cf1958610d5c3e382b2499f7bdd3987ebb97b7c6107fb75e9d453ab27f522b29f9d6a985e297")
+    pq = parseOnly (principalParser False) q
+
+qSpec256 :: TestTree
+qSpec256 =
+  testGroup "q:256" [kRoundtrips, kCorrectIdents]
+  where
+    kRoundtrips =
+      testCase "q: parser roundtrips" $ do
+        -- principal -> text
+        pq @?= Right q'
+        -- text -> principal
+        mkPrincipalIdent q' @?= q
+    kCorrectIdents =
+      testCase "q: has correct identifiers" $
+        -- principal -> correct id
+        fmap showPrincipalType pq @?= Right (showPrincipalType q')
+    q = "q:7023cd52cdcb8c36125e613ed47ea2c0602364c5e9f98dfca8d67e041b6efa504492828ddfd23108777c3ba7135e06054a2441a03a9784092be1d5356decc75f"
+    q' = Q (PublicKeyText "q7023cd52cdcb8c36125e613ed47ea2c0602364c5e9f98dfca8d67e041b6efa504492828ddfd23108777c3ba7135e06054a2441a03a9784092be1d5356decc75f")
+    pq = parseOnly (principalParser False) q
+
+xSpec :: TestTree
+xSpec =
+  testGroup "x:" [wRoundtrips, wCorrectIdents]
+  where
+    wRoundtrips =
+      testCase "x: parser roundtrips" $ do
+        px @?= Right x'
+        mkPrincipalIdent x' @?= x
+    wCorrectIdents =
+      testCase "x: has correct identifiers" $
+        fmap showPrincipalType px @?= Right (showPrincipalType x')
+    x = "x:5PhRgNM3oePrkfAKhk9dYmjRqOhEEhbR2eyFz8HU_ew:keys-all"
+    x' = X "5PhRgNM3oePrkfAKhk9dYmjRqOhEEhbR2eyFz8HU_ew" "keys-all"
+    px = parseOnly (principalParser False) x

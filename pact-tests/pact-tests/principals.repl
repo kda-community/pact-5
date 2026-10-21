@@ -597,3 +597,324 @@
  (continue-pact 1))
 
 (commit-tx)
+
+(begin-tx)
+
+;; q: account validation
+
+(env-data
+  { 'ks-q128: ["q584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68"],
+    'ks-q192: ["q584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0a"],
+    'ks-q256: ["q584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0aa603bfb855654ee64052e9bd38c6970a"],
+    'ks-x128:
+      [ "q4440249a122879f2060814e1c4348cdfe0cbf971017ab1f43a0eaf9799583271"
+      , "q2f625f20a1a6fffb60455bf957779a82e3d811d350f2b9bc8d3d5549bfd4a953"
+      ],
+    'ks-mixed:
+      [ "q4440249a122879f2060814e1c4348cdfe0cbf971017ab1f43a0eaf9799583271"
+      , "2f625f20a1a6fffb60455bf957779a82e3d811d350f2b9bc8d3d5549bfd4a953"
+      ]
+  })
+
+(expect
+ "creating principals using keysets creates q: accounts"
+ "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68"
+ (create-principal (read-keyset 'ks-q128)))
+
+(expect
+ "validating principals using created principal keysets passes validation"
+ true
+ (validate-principal
+  (read-keyset 'ks-q128)
+  "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68"
+  ))
+
+(expect
+ "validating principal keysets roundtrips for all created principals"
+ true
+ (validate-principal
+  (read-keyset 'ks-q128)
+  (create-principal (read-keyset 'ks-q128))
+  ))
+
+(expect
+  "is-principal returns true for q: accounts"
+  true
+  (is-principal (create-principal (read-keyset 'ks-q128))))
+
+(expect
+  "is-principal should be false for improper q: accounts"
+  false
+  (is-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c687"))
+
+(expect
+  "typeof-principal should return q: for q accounts"
+  "q:"
+  (typeof-principal (create-principal (read-keyset 'ks-q128))))
+
+(expect
+  "typeof-principal should fail for q: accounts: improper keylength - too big"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c687"))
+
+(expect
+  "typeof-principal should fail for q: accounts: improper keylength - too small"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c6"))
+
+(commit-tx)
+
+;----------------------------------------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------
+(begin-tx)
+
+;; q:192s account validation for 192s
+
+(expect
+ "creating principals using keysets creates q:192s accounts"
+ "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0a"
+ (create-principal (read-keyset 'ks-q192)))
+
+(expect
+ "validating principals using created principal keysets passes validation"
+ true
+ (validate-principal
+  (read-keyset 'ks-q192)
+  "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0a"
+  ))
+
+(expect
+ "validating principal keysets roundtrips for all created principals"
+ true
+ (validate-principal
+  (read-keyset 'ks-q192)
+  (create-principal (read-keyset 'ks-q192))
+  ))
+
+(expect
+  "is-principal returns true for q:192s accounts"
+  true
+  (is-principal (create-principal (read-keyset 'ks-q192))))
+
+(expect
+  "is-principal should be false for improper q: accounts"
+  false
+  (is-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c687a4f848021ce9e63ecb26e4e2c3b01e0a"))
+
+(expect
+  "typeof-principal should return q:192s for q accounts"
+  "q:"
+  (typeof-principal (create-principal (read-keyset 'ks-q192))))
+
+(expect
+  "typeof-principal should fail for q:192s accounts: improper keylength - too big"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c687a4f848021ce9e63ecb26e4e2c3b01e0a"))
+
+(expect
+  "typeof-principal should fail for q:192s accounts: improper keylength - too small"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c6a4f848021ce9e63ecb26e4e2c3b01e0a"))
+(commit-tx)
+
+;----------------------------------------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------
+
+(begin-tx)
+
+;; q:256s account validation
+
+
+(expect
+ "creating principals using keysets creates q:256s accounts"
+ "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0aa603bfb855654ee64052e9bd38c6970a"
+ (create-principal (read-keyset 'ks-q256)))
+
+(expect
+ "validating principals using created principal keysets passes validation"
+ true
+ (validate-principal
+  (read-keyset 'ks-q256)
+  "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0aa603bfb855654ee64052e9bd38c6970a"
+  ))
+
+(expect
+ "validating principal keysets roundtrips for all created principals"
+ true
+ (validate-principal
+  (read-keyset 'ks-q256)
+  (create-principal (read-keyset 'ks-q256))
+  ))
+
+(expect
+  "is-principal returns true for q:256s accounts"
+  true
+  (is-principal (create-principal (read-keyset 'ks-q256))))
+
+(expect
+  "is-principal should be false for improper q:256s accounts"
+  false
+  (is-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c687a4f848021ce9e63ecb26e4e2c3b01e0aa603bfb855654ee64052e9bd38c6970a"))
+
+(expect
+  "typeof-principal should return q: for q256s accounts"
+  "q:"
+  (typeof-principal (create-principal (read-keyset 'ks-q256))))
+
+(expect
+  "typeof-principal should fail for q:256s accounts: improper keylength - too big"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c687a4f848021ce9e63ecb26e4e2c3b01e0aa603bfb855654ee64052e9bd38c6970a"))
+
+(expect
+  "typeof-principal should fail for q:256s accounts: improper keylength - too small"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c6a4f848021ce9e63ecb26e4e2c3b01e0aa603bfb855654ee64052e9bd38c6970a"))
+
+(commit-tx)
+
+
+;----------------------------------------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------
+(begin-tx)
+;; x: account validation
+
+
+(expect
+ "creating principal keysets with more than 1 key creates x: accounts"
+ "x:HboAC_calnmHctz8ESbsu08pB0RyYalWkHqOfyPIGe4:keys-all"
+ (create-principal (read-keyset 'ks-x128)))
+
+(expect
+ "validation for x: account creation validates passes"
+ true
+ (validate-principal
+   (read-keyset 'ks-x128)
+   "x:HboAC_calnmHctz8ESbsu08pB0RyYalWkHqOfyPIGe4:keys-all"
+   ))
+
+(expect
+ "validation for x: account creation roundtrips with create-principal"
+ true
+ (validate-principal
+   (read-keyset 'ks-x128)
+   (create-principal (read-keyset 'ks-x128))
+   ))
+
+(expect
+  "is-principal returns true for x: accounts"
+  true
+  (is-principal (create-principal (read-keyset 'ks-x128))))
+
+(expect
+  "is-principal should be false for improper x: accounts"
+  false
+  (is-principal "x:5PhRgNM3oePrkfAKhk9dYmjRqOhEEhbR2eyFz8HU_:keys-all"))
+
+(expect
+  "typeof-principal should return 'x:' for x: accounts"
+  "x:"
+  (typeof-principal (create-principal (read-keyset 'ks-x128))))
+
+(expect
+  "typeof-principal should fail for x accounts: improper hash length - too big"
+  ""
+  (typeof-principal "x:KEKrho03q2MiIqkGQBSJLbxNvj_EHfZhVDxVcye7q9Y_ewe:keys-all"))
+
+(expect
+  "typeof-principal should fail for x accounts: improper hash length - too small"
+  ""
+  (typeof-principal "x:KEKrho03q2MiIqkGQBSJLbxNvj_E_missing:keys-all"))
+
+(expect
+  "typeof-principal should fail for x accounts: empty predicate"
+  ""
+  (typeof-principal "x:KEKrho03q2MiIqkGQBSJLbxNvj_EHfZhVDxVcye7q9Y:"))
+
+(commit-tx)
+
+;----------------------------------------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------
+(begin-tx)
+;; Mixed accounts validation => w:
+
+(expect
+ "creating principal keysets with more than 1 mixed key creates w: accounts"
+ "w:LQXM1TiHKak4asnK_JZ2A1pe61bu158hdU7Td-OUnuY:keys-all"
+ (create-principal (read-keyset 'ks-mixed)))
+
+(expect
+ "validation for mixed w: account creation validates passes"
+ true
+ (validate-principal
+   (read-keyset 'ks-mixed)
+   "w:LQXM1TiHKak4asnK_JZ2A1pe61bu158hdU7Td-OUnuY:keys-all"
+   ))
+
+(expect
+ "validation for mixed w: account creation roundtrips with create-principal"
+ true
+ (validate-principal
+   (read-keyset 'ks-mixed)
+   (create-principal (read-keyset 'ks-mixed))
+   ))
+
+(expect
+  "is-principal returns true for mixed w: accounts"
+  true
+  (is-principal (create-principal (read-keyset 'ks-mixed))))
+
+(commit-tx)
+
+
+;----------------------------------------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------
+; Check that Post-Quantum account don't work with the disable flag
+;----------------------------------------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------
+(begin-tx)
+(env-exec-config ["DisableSlhDsaSignatures"])
+
+(expect
+  "q: account are not supported"
+  false
+  (is-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68"))
+
+(expect
+  "q: account are not supported"
+  false
+  (is-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0a"))
+
+(expect
+  "q: account are not supported"
+  false
+  (is-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0aa603bfb855654ee64052e9bd38c6970a"))
+
+(expect
+  "x: account are not supported"
+  false
+  (is-principal "x:5PhRgNM3oePrkfAKhk9dYmjRqOhEEhbR2eyFz8HU_ew:keys-all"))
+
+
+(expect
+  "q: account are not supported by typeof"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68"))
+
+(expect
+  "q: account are not supported by typeof"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0a"))
+
+(expect
+  "q: account are not supported by typeof"
+  ""
+  (typeof-principal "q:584deb6f81d8efe67767309d1732019cf6ad14f9f0007cff50c730ef62521c68a4f848021ce9e63ecb26e4e2c3b01e0aa603bfb855654ee64052e9bd38c6970a"))
+
+(expect
+  "x: account are not supported by typeof"
+  ""
+  (typeof-principal "x:5PhRgNM3oePrkfAKhk9dYmjRqOhEEhbR2eyFz8HU_ew:keys-all"))
+
+
+(commit-tx)

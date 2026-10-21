@@ -59,6 +59,8 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Pact.Time
 import Pact.JSON.Yaml
 import System.FilePath
+
+import Data.Base16.Types
 import qualified Pact.JSON.Encode as J
 import qualified Pact.JSON.Decode as JD
 import qualified Data.Yaml as Y
@@ -527,7 +529,7 @@ signCmd keyFiles bs = do
       kps <- mapM importKeyFile keyFiles
       fmap (encodeYaml . J.Object) $ forM kps $ \kp -> do
             let sig = signHash (Hash $ SBS.toShort h) kp
-            return ((toB16Text . _b16JsonBytes) (B16JsonBytes (getPublic kp)), sig)
+            return ((toB16Text . _b16JsonBytes) (B16JsonBytes (getPublic kp)), extractBase16 sig)
 
 withKeypairsOrSigner
   :: Bool
@@ -788,9 +790,9 @@ keyPairToSigner cred caps = Signer scheme pub addr caps
 keyPairsToSigners :: [Ed25519KeyPairCaps] -> [Signer]
 keyPairsToSigners creds = map (uncurry keyPairToSigner) creds
 
-signHash :: PactHash.Hash -> Ed25519KeyPair -> Text
+signHash :: PactHash.Hash -> Ed25519KeyPair -> Base16 Text
 signHash hsh (pub,priv) =
-  toB16Text $ exportEd25519Signature $ signEd25519 pub priv hsh
+  exportEd25519Signature' $ signEd25519 pub priv hsh
 
 -- | Make a Command without signing it. This is used in Chainweb's Rosetta Utils.
 mkUnsignedCommand

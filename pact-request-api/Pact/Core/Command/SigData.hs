@@ -32,6 +32,8 @@ import qualified Data.Text as T
 import Data.Text.Encoding
 import GHC.Generics
 
+import Data.Base64.Types
+import Data.Base16.Types
 import Pact.Core.Command.Types
 
 import qualified Pact.JSON.Encode as J
@@ -84,20 +86,26 @@ instance FromJSON a => FromJSON (SigData a) where
     pure $ SigData h s c
     where
       f v = flip (withObject "SigData Pairs") v $ \_ ->
-        fmap (bimap PublicKeyHex (fmap ED25519Sig)) . LHM.sortByKey . HM.toList <$> parseJSON v
+        fmap (bimap PublicKeyHex (fmap (ED25519Sig . assertBase16))) . LHM.sortByKey . HM.toList <$> parseJSON v
+--                                                       ^___ HELPIE : Emily will smite me !
+
+
+-- TODO This need to be fixed properly to take into account SLH-DSA signatures
+
 
 instance J.Encode a => J.Encode (SigData a) where
   build o = J.object
     [ "hash" J..= _sigDataHash o
-    , "sigs" J..= LHM.fromList (bimap unPublicKeyHex (fmap extractEd25519Sig) <$> _sigDataSigs o)
+    , "sigs" J..= LHM.fromList (bimap unPublicKeyHex (fmap extractPlainSig) <$> _sigDataSigs o)
       -- FIXME: this instance seems to violate the comment on the respective
       -- constructor field. Is that fine? Is it required for backward compat?
       -- This instance also does not roundtrip.
     , "cmd" J..?= _sigDataCmd o
     ]
     where
-    extractEd25519Sig (ED25519Sig s) = s
-    extractEd25519Sig _ = error "SigData cannot contain non-ED25519 signature"
+    extractPlainSig (ED25519Sig s) = extractBase16 s
+    extractPlainSig (SLHDSASig s) = extractBase64 s
+    extractPlainSig _ = error "SigData cannot contain non-ED25519 signature"
   {-# INLINE build #-}
 
 commandToSigData :: Command Text -> Either String (SigData Text)
