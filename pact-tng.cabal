@@ -61,8 +61,8 @@ common pact-common
     , Decimal
     , attoparsec
     , base >= 4.22
-    , base16-bytestring
-    , base64-bytestring
+    , base16 >= 2.0
+    , base64 >= 2.1
     , bytestring
     , cereal
     , containers
@@ -143,7 +143,7 @@ library pact-crypto
     , deepseq
     , vector
     , text
-    , base64-bytestring
+    , base64 >= 2.1
     , bytestring
     , ram >=0.2.2
     , crypton
@@ -486,7 +486,7 @@ library test-utils
     , directory
     , exceptions
     , hedgehog
-    , base16-bytestring
+    , base16 >= 2.0
     , filepath
     , lens
     , mtl
@@ -544,7 +544,7 @@ test-suite core-tests
     , directory
     , exceptions
     , hedgehog
-    , base16-bytestring
+    , base16 >= 2.0
     , filepath
     , lens
     , mtl
