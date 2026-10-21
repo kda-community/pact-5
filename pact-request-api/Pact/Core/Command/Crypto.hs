@@ -106,7 +106,7 @@ import qualified Data.ByteString.Base16 as B16
 import Data.Base16.Types
 import Data.Base64.Types
 
-
+import qualified Data.Text.Encoding.Base64.URL as B64URLT
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Base64.URL as Base64URL
 import Data.Proxy
@@ -157,6 +157,9 @@ instance J.Encode UserSig where
 instance A.FromJSON UserSig where
   parseJSON x =
     parseEddHexSig x <|> parseSlhBase64Sig x <|> parseWebAuthnStringified x <|> fail "Invalid Signature"
+    -- Note: Parsing costs are handled by the node
+    -- Gas is charged based on signature size in bytes.
+    -- It's far from being perfectly accurate, but it limits most abuses, and DoS
     where
       -- WebAuthn case : try to parse as a JSON
       parseWebAuthnStringified = A.withObject "UserSig" $ \o -> do
@@ -165,7 +168,7 @@ instance A.FromJSON UserSig where
           Nothing -> empty
           Just webauthnSig -> return $ WebAuthnSig webauthnSig
 
-      -- EDD Case: try to parse as Hex
+      -- EdDSA Case: try to parse as Hex
       parseEddHexSig = A.withObject "UserSig" $ \o -> do
         t <- o A..: "sig"
         guard (T.length t == 128)
@@ -175,11 +178,8 @@ instance A.FromJSON UserSig where
       parseSlhBase64Sig = A.withObject "UserSig" $ \o -> do
         t <- o A..: "sig"
         guard (T.length t `elem` [10475, 21632, 39723])
-        either (const empty) (return . SLHDSASig) $ parseBase64UnPadded t
+        either (const empty) (return . SLHDSASig) $ B64URLT.parseBase64Unpadded t
 
-
-parseBase64UnPadded :: T.Text -> Either T.Text (Base64 'UrlUnpadded T.Text)
-parseBase64UnPadded t = assertBase64 t <$ Base64URL.decodeBase64UnpaddedUntyped (T.encodeUtf8 t)
 
 verifyEd25519Sig :: PactHash.Hash -> Ed25519.PublicKey -> Ed25519.Signature -> Either String ()
 verifyEd25519Sig (PactHash.Hash msg) pubKey sig =
