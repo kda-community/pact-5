@@ -1,0 +1,112 @@
+name: WASM Build
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      WASM_CABAL: wasm32-wasi-cabal --project-file=cabal.project.wasi
+
+    steps:
+      - name: Install Native GHC and Cabal
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: 9.14.1
+          cabal-version: 3.16
+
+      - name: Install WASM GHC Toolchain
+        run: |
+          curl -fsSL --retry 5 https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/raw/master/bootstrap.sh | sh
+          ~/.ghc-wasm/add_to_github_path.sh
+          echo "SYSROOT=$HOME/.ghc-wasm/wasi-sdk/share/wasi-sysroot" >> "$GITHUB_ENV"
+
+      - name: Prepare dirs
+        run: mkdir -p ${{ github.workspace }}/external-deps
+
+
+      - name: Build GMP
+        working-directory: ${{ github.workspace }}/external-deps
+        env:
+          CFLAGS: -O2 -D_WASI_EMULATED_SIGNAL -fPIC
+          LDFLAGS: -lwasi-emulated-signal
+
+        run: |
+          wget --retry-connrefused -w 20 -t 10 https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz
+          tar xJf gmp-6.3.0.tar.xz
+          cd gmp-6.3.0
+          ./configure --host=wasm32-wasi --prefix="$SYSROOT" --libdir="$SYSROOT/lib/wasm32-wasi" \
+                      --disable-assembly --disable-shared --enable-static
+
+          make
+          make install
+
+      - name: Build MPFR
+        working-directory: ${{ github.workspace }}/external-deps
+        env:
+          CFLAGS: -O2  -fPIC
+        run: |
+          wget --retry-connrefused -w 20 -t 10 https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz
+          tar xJf mpfr-4.2.2.tar.xz
+          cd mpfr-4.2.2
+
+          ./configure --host=wasm32-wasi --prefix="$SYSROOT" --libdir="$SYSROOT/lib/wasm32-wasi" \
+                      --disable-shared --enable-static
+
+          make
+          make install
+
+      - name: Install native Alex and Happy
+        run: |
+          cabal install happy alex
+
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build dependencies
+        run: |
+          $WASM_CABAL build lib:pact-tng --only-dependencies
+
+      - name: Build pact lib
+        run: |
+          $WASM_CABAL build lib:pact-tng
+
+      - name: Build REPL lib
+        run: |
+          $WASM_CABAL build lib:pact-repl
+
+      - name: Build Raw Pact
+        id: pact-raw
+        run: |
+          $WASM_CABAL build exe:pact-raw
+          BIN=$($WASM_CABAL list-bin exe:pact-raw)
+          echo "bin=$BIN" >> $GITHUB_OUTPUT
+
+      - name: Build WASM Reactor
+        id: pact-wasm-reactor
+        run: |
+          $WASM_CABAL build exe:pact-wasm-reactor
+          BIN=$($WASM_CABAL list-bin exe:pact-wasm-reactor)
+          echo "bin=$BIN" >> $GITHUB_OUTPUT
+
+      - name: Build Post-Link JS
+        run: |
+          mkdir -p js
+          $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i ${{ steps.pact-wasm-reactor.outputs.bin }} -o js/pact-wasm-reactor.js
+
+      - name: Prepare Artifacts
+        run: |
+          mkdir -p dist
+          cp ${{ steps.pact-raw.outputs.bin }} dist
+          cp ${{ steps.pact-wasm-reactor.outputs.bin }} dist
+          cp js/pact-wasm-reactor.js dist
+          $STRIP dist/*.wasm
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wasm-pact
+          path: dist

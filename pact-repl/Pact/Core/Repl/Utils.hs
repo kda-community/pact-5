@@ -26,7 +26,6 @@ module Pact.Core.Repl.Utils
  , whenReplFlagSet
  , unlessReplFlagSet
  , debugIfFlagSet
- , replCompletion
  , replCurrSource
  , replTx
  , ReplAction(..)
@@ -40,6 +39,7 @@ module Pact.Core.Repl.Utils
  , (.==)
  , (%==)
  , gasLogEntrytoPactValue
+ , renderLocatedPactErrorFromState
  , replPrintLn
  , replPrintLn'
  , replTraceLn
@@ -48,6 +48,7 @@ module Pact.Core.Repl.Utils
  , recordTestFailure
  , emptyTxState
  , mkReplErrorLocSlice
+ , specialFormNames
  ) where
 
 import Control.Lens
@@ -58,7 +59,6 @@ import Control.Monad.State.Strict(put)
 import Data.Void
 import Data.IORef
 import Data.Text(Text)
-import Data.List(isPrefixOf)
 import Data.Maybe(mapMaybe)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as M
@@ -79,7 +79,6 @@ import Pact.Core.Debug
 import Pact.Core.IR.Desugar
 import qualified Pact.Core.IR.Term as Term
 
-import System.Console.Haskeline.Completion
 import Data.Default
 
 renderReplFlag :: ReplDebugFlag -> String
@@ -201,32 +200,15 @@ emptyTxState = do
 specialFormNames:: [Text]
 specialFormNames = mapMaybe specialFormToText [minBound .. maxBound]
 
-
-replCompletion
-  :: [Text]
-  -- ^ natives
-  -> CompletionFunc (ReplM b)
-replCompletion natives =
-  completeQuotedWord (Just '\\') "\"" listFiles $
-  completeWord (Just '\\') filenameWordBreakChars $ \str -> do
-    tlns <- uses (loaded . loToplevel) M.keys
-    moduleNames <- uses (loaded . loModules) (fmap renderModuleName . M.keys)
-    prefixedNames <- uses (loaded . loModules) toPrefixed
-    let
-      allNames = Set.fromList $ T.unpack <$> concat
-        [tlns, moduleNames, prefixedNames, natives, specialFormNames]
-    pure $ simpleCompletion <$> Set.toList (Set.filter (str `isPrefixOf`) allNames)
+-- | Render a nice error
+renderLocatedPactErrorFromState :: ReplState b -> PactError FileLocSpanInfo -> Text
+renderLocatedPactErrorFromState rstate err = rendered
   where
-  defNames = \case
-    ModuleData md _ ->
-      Term.defName <$> Term._mDefs md
-    InterfaceData iface _ ->
-      fmap (_argName . Term._dcSpec) $ mapMaybe (preview Term._IfDConst) $ Term._ifDefns iface
-  toPrefixed m =
-    concat $ prefixF <$> M.toList m
-  prefixF (mn, ems) = let
-    dns = defNames ems
-    in fmap ((renderModuleName mn <> ".") <>) dns
+  replInfo = view peInfo err
+  originFile = case rstate ^. replLoadedFiles . at (_flsiFile replInfo) of
+            Just sc -> sc
+            Nothing -> rstate ^. replCurrSource
+  rendered = replError originFile err
 
 evalReplM :: IORef (ReplState b) -> ReplM b a -> IO (Either (PactError FileLocSpanInfo) a)
 evalReplM env st = runEvalMResult (ReplEnv env) def st

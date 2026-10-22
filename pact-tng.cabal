@@ -1,4 +1,4 @@
-cabal-version:       3.16
+cabal-version:       3.14
 name:                pact-tng
 version:             5.4.1
 -- ^ 4 digit is prerelease, 3- or 2-digit for prod release
@@ -88,7 +88,6 @@ common pact-common
     , ram >=0.2.2
     , safe-exceptions
     , ralist >= 0.4.0.0
-    , haskeline
     , semirings
     , utf8-string
     , exceptions
@@ -304,7 +303,8 @@ library
     -- Coverage
     Pact.Core.Coverage.Types
 
-  extra-libraries: mpfr
+  if !arch(wasm32)
+    extra-libraries: mpfr
 
 library pact-repl
   import: pact-common
@@ -330,8 +330,13 @@ library pact-repl
     build-depends:
       pandoc
 
+  if !arch(wasm32)
+    exposed-modules:
+      Pact.Core.Repl
+    build-depends:
+      haskeline
+
   exposed-modules:
-    Pact.Core.Repl
     Pact.Core.Repl.Utils
     Pact.Core.Repl.Runtime.ReplBuiltin
     Pact.Core.Repl.Compile
@@ -418,6 +423,9 @@ executable pact
   import: pact-common
   main-is: pact-repl/Main.hs
 
+  if arch(wasm32)
+    buildable: False
+
   build-depends: base
                , pact-tng
                , pact-tng:pact-repl
@@ -436,6 +444,40 @@ executable pact
     -- and stops crapping out both LSP and our CI,
     -- PackageInfo_pact_tng
     Paths_pact_tng
+
+executable pact-raw
+  import: pact-common
+  main-is: raw-interpreter/Main.hs
+
+  build-depends: base
+               , pact-tng
+               , pact-tng:pact-repl
+
+  extra-libraries: mpfr
+
+executable pact-wasm-reactor
+  import: pact-common
+
+  if !arch(wasm32)
+    buildable: False
+
+  main-is: wasm-reactor/Main.hs
+
+  build-depends: base
+               , ghc-experimental
+               , pact-tng
+               , pact-tng:pact-repl
+
+  extra-libraries: mpfr
+
+  ghc-options: -no-hs-main -O2
+               "-optl-mexec-model=reactor"
+               "-optl-Wl,--export=pactReset"
+               "-optl-Wl,--export=pactEval"
+               "-optl-Wl,--export=pactVersion"
+               "-optl-Wl,--export=pactBuiltins"
+               "-optl-Wl,--export=pactBuiltinDoc"
+               "-optl-Wl,--export=pactCheckCompleteExpression"
 
 benchmark bench
   type: exitcode-stdio-1.0
