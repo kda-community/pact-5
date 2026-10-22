@@ -35,11 +35,17 @@ import System.FilePath
 import System.Directory (createDirectoryIfMissing)
 import Data.IORef
 import Data.Text(Text)
+import Data.List(isPrefixOf)
+import Data.Maybe(mapMaybe)
+import qualified Data.Set as Set
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 import Pact.Core.Builtin
 import Pact.Core.Environment
+import Pact.Core.Persistence
+import Pact.Core.Names
 import Pact.Core.Persistence.MockPersistence
 import Pact.Core.Pretty
 import Pact.Core.Repl.Compile
@@ -48,6 +54,8 @@ import Pact.Core.Serialise
 import Pact.Core.Info
 import Pact.Core.Errors
 import Pact.Core.Coverage (showReport)
+
+import qualified Pact.Core.IR.Term as Term
 
 execScript :: Bool -> Bool -> FilePath -> IO (Either (PactError FileLocSpanInfo) [ReplCompileValue], ReplState ReplCoreBuiltin)
 execScript traceEnabled coverageEnabled f = do
@@ -77,15 +85,33 @@ execScript traceEnabled coverageEnabled f = do
     | traceEnabled = logWithTrace "Trace" floc v
     | otherwise = pure ()
 
--- | Render a nice error
-renderLocatedPactErrorFromState :: ReplState b -> PactError FileLocSpanInfo -> Text
-renderLocatedPactErrorFromState rstate err = rendered
+
+
+replCompletion
+  :: [Text]
+  -- ^ natives
+  -> CompletionFunc (ReplM b)
+replCompletion natives =
+  completeQuotedWord (Just '\\') "\"" listFiles $
+  completeWord (Just '\\') filenameWordBreakChars $ \str -> do
+    tlns <- uses (loaded . loToplevel) M.keys
+    moduleNames <- uses (loaded . loModules) (fmap renderModuleName . M.keys)
+    prefixedNames <- uses (loaded . loModules) toPrefixed
+    let
+      allNames = Set.fromList $ T.unpack <$> concat
+        [tlns, moduleNames, prefixedNames, natives, specialFormNames]
+    pure $ simpleCompletion <$> Set.toList (Set.filter (str `isPrefixOf`) allNames)
   where
-  replInfo = view peInfo err
-  originFile = case rstate ^. replLoadedFiles . at (_flsiFile replInfo) of
-            Just sc -> sc
-            Nothing -> rstate ^. replCurrSource
-  rendered = replError originFile err
+  defNames = \case
+    ModuleData md _ ->
+      Term.defName <$> Term._mDefs md
+    InterfaceData iface _ ->
+      fmap (_argName . Term._dcSpec) $ mapMaybe (preview Term._IfDConst) $ Term._ifDefns iface
+  toPrefixed m =
+    concat $ prefixF <$> M.toList m
+  prefixF (mn, ems) = let
+    dns = defNames ems
+    in fmap ((renderModuleName mn <> ".") <>) dns
 
 runRepl :: IO ()
 runRepl = do

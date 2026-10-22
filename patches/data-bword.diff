@@ -1,0 +1,22 @@
+diff --git a/src/Data/BinaryWord.hs b/src/Data/BinaryWord.hs
+index 4b32683..1f6d2d9 100644
+--- a/src/Data/BinaryWord.hs
++++ b/src/Data/BinaryWord.hs
+@@ -215,7 +215,7 @@ instance BinaryWord Word32 where
+   {-# INLINE unsignedWord #-}
+   signedWord = fromIntegral
+   {-# INLINE signedWord #-}
+-#if __GLASGOW_HASKELL__ >= 705 && WORD_SIZE_IN_BITS == 32
++#if __GLASGOW_HASKELL__ >= 705 && WORD_SIZE_IN_BITS == 32 && !defined(wasm32_HOST_ARCH)
+   unwrappedAdd (W32# x) (W32# y) = hi `seq` lo `seq` (hi, lo)
+     where !(# hi', lo' #) = plusWord2# x y
+           lo = W32# lo'
+@@ -227,7 +227,7 @@ instance BinaryWord Word32 where
+           hi = fromIntegral (shiftR s 32)
+ #endif
+   {-# INLINE unwrappedAdd #-}
+-#if __GLASGOW_HASKELL__ >= 705 && WORD_SIZE_IN_BITS == 32
++#if __GLASGOW_HASKELL__ >= 705 && WORD_SIZE_IN_BITS == 32 && !defined(wasm32_HOST_ARCH)
+   unwrappedMul (W32# x) (W32# y) = hi `seq` lo `seq` (hi, lo)
+     where !(# hi', lo' #) = timesWord2# x y
+           lo = W32# lo'

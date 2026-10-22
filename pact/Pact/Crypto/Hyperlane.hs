@@ -130,6 +130,7 @@ getHyperlaneMessageId =
   . BB.toLazyByteString
   . packHyperlaneMessage
 
+
 keccak256Hash :: ByteString -> ByteString
 keccak256Hash = BA.convert . doHash
   where
