@@ -17,8 +17,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 
 
--- TODO Double Check how the Left message could contaminate and being an unexpected forking change.
--- TODO Triple Check  ^
 decodeBase64UrlUnpadded :: ByteString -> Either String ByteString
 decodeBase64UrlUnpadded = first T.unpack . B64URL.decodeBase64Untyped
 
