@@ -84,7 +84,7 @@ common pact-common
     , vector
     , vector-algorithms
     , megaparsec
-    ,  >=1.1.2
+    , crypton >=1.1.2 && <2.0
     , ram >=0.2.2
     , safe-exceptions
     , ralist >= 0.4.0.0
