@@ -3,7 +3,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Pact.Core.Test.Keccak256Tests(tests) where
 
-import Data.ByteString.Base16 qualified as Base16
+import Data.Bifunctor (first)
+import Data.Base16.Types qualified as B16
+import Data.ByteString.Base16 qualified as B16
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -57,13 +59,13 @@ hashChunks chunks = unwrap go
   where
     go :: Either String Text
     go = do
-      vals <- traverse (Base16.decode . Text.encodeUtf8) chunks
+      vals <- traverse (first Text.unpack . B16.decodeBase16Untyped . Text.encodeUtf8 ) chunks
       let texts = V.fromList $ map encodeBase64UrlUnpadded vals
       case keccak256 texts of
         Left err -> Left (show err)
         Right out -> do
           rawHash <- decodeBase64UrlUnpadded (Text.encodeUtf8 out)
-          pure (Text.decodeUtf8 (Base16.encode rawHash))
+          pure $ B16.extractBase16 $ B16.encodeBase16 rawHash
 
 hashInputAndCompareToOutput :: Text -> Text -> IO ()
 hashInputAndCompareToOutput i o =
