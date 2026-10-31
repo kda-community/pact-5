@@ -164,7 +164,7 @@ parseWebAuthnPublicKeyText :: PublicKeyText -> Maybe WA.CosePublicKey
 parseWebAuthnPublicKeyText (PublicKeyText k)
   | Just pkText <- T.stripPrefix webAuthnPrefix k
   , T.all isHexDigitLower pkText
-  , Right kbs <- B16.decode (T.encodeUtf8 pkText)
+  , Right kbs <- B16.decodeBase16Untyped $ T.encodeUtf8 pkText
   , Right pk <- parseWebAuthnPublicKey kbs
   = Just pk
   | otherwise = Nothing
